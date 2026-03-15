@@ -338,7 +338,7 @@ input::placeholder,textarea::placeholder{color:var(--muted2);}
         <input type="date" id="sellDate" style="padding-left:10px" />
       </div>
       <div class="field" style="margin-bottom:0">
-        <label class="label">Notiz (optional)</label>
+        <label class="label">Abschluss-Notiz (optional)</label>
         <textarea id="sellNote" placeholder="z.B. Stop-Loss ausgelöst, Gewinnmitnahme bei Ziel erreicht…"></textarea>
       </div>
     </div>
@@ -452,8 +452,8 @@ input::placeholder,textarea::placeholder{color:var(--muted2);}
                 <input type="date" id="inBuyDate" style="padding-left:10px" />
               </div>
               <div class="field" style="margin-bottom:14px">
-                <label class="label">Notiz / Trade-Idee <span class="auto-tag">optional</span></label>
-                <textarea id="inNote" placeholder="Was ist die Idee hinter diesem Trade?"></textarea>
+                <label class="label">Eröffnungs-Notiz <span class="auto-tag">optional</span></label>
+                <textarea id="inNote" placeholder="Trade-Idee, Analyse, Zielkurs…"></textarea>
               </div>
               <button class="btn btn-primary" id="addBtn" onclick="savePos()">＋ Position hinzufügen</button>
               <button class="btn btn-ghost" id="cancelBtn" onclick="cancelEdit()" style="display:none">✕ Abbrechen</button>
@@ -605,18 +605,20 @@ input::placeholder,textarea::placeholder{color:var(--muted2);}
             <thead>
               <tr>
                 <th>Symbol</th>
-                <th>Kauf</th>
-                <th>Verkauf</th>
+                <th>Kaufkurs / Datum</th>
+                <th>Verkaufskurs / Datum</th>
                 <th>Stück</th>
                 <th>Hebel</th>
                 <th>P&amp;L €</th>
                 <th>P&amp;L %</th>
-                <th>Datum</th>
-                <th>Notiz</th>
+                <th>Haltedauer</th>
+                <th>Jahres-Perf.</th>
+                <th>Eröffnungs-Notiz</th>
+                <th>Abschluss-Notiz</th>
               </tr>
             </thead>
             <tbody id="tradesBody">
-              <tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted2);">Noch keine abgeschlossenen Trades</td></tr>
+              <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--muted2);">Noch keine abgeschlossenen Trades</td></tr>
             </tbody>
           </table>
         </div>
@@ -692,7 +694,7 @@ async function dbLoadAll() {
     const fx = getFx();
     const buyEur  = (r.buy_price  * r.qty) / fx;
     const sellEur = (r.sell_price * r.qty) / fx;
-    return {...r, pnlEur: sellEur - buyEur, pnlPct: (sellEur - buyEur) / buyEur * 100};
+    return {...r, note_open:r.note_open||null, note_close:r.note_close||null, pnlEur: sellEur - buyEur, pnlPct: (sellEur - buyEur) / buyEur * 100};
   });
   depotHistory = histRows;
   const depot = setRows.find(r=>r.key==='depot');
@@ -728,7 +730,8 @@ async function dbInsertTrade(t) {
     body: JSON.stringify({
       id:t.id, symbol:t.symbol, buy_price:t.buy_price, sell_price:t.sell_price,
       qty:t.qty, lev:t.lev, buy_date:t.buy_date||null, sell_date:t.sell_date,
-      note:t.note||null, depot_value_at_buy:t.depot_value_at_buy||null
+      note_open:t.note_open||null, note_close:t.note_close||null,
+      depot_value_at_buy:t.depot_value_at_buy||null
     })
   });
 }
@@ -940,7 +943,8 @@ async function confirmSell() {
       lev: p.lev,
       buy_date: p.buyDate||null,
       sell_date: sellDate,
-      note: sellNote,
+      note_open: p.note||null,
+      note_close: sellNote||null,
       depot_value_at_buy: depot,
       pnlEur: sellEur - buyEur,
       pnlPct: (sellEur - buyEur)/buyEur*100
@@ -1345,22 +1349,50 @@ function renderJournal() {
   // Trades table
   const tbody=document.getElementById('tradesBody');
   if(!trades.length){
-    tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted2);">Noch keine abgeschlossenen Trades</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--muted2);">Noch keine abgeschlossenen Trades</td></tr>`;
     return;
   }
   tbody.innerHTML=trades.map(t=>{
     const pnlCol=t.pnlEur>0?'var(--green)':t.pnlEur<0?'var(--red)':'var(--muted)';
     const sign=t.pnlEur>0?'+':'';
+
+    // Holding period
+    const buyDt  = t.buy_date  ? new Date(t.buy_date+'T00:00:00')  : null;
+    const sellDt = t.sell_date ? new Date(t.sell_date+'T00:00:00') : null;
+    const holdDays = buyDt && sellDt ? Math.round((sellDt - buyDt) / 86400000) : null;
+    const holdStr  = holdDays !== null ? holdDays + ' Tag' + (holdDays !== 1 ? 'e' : '') : '—';
+
+    // Annualized performance: (pnlPct / holdDays) * 365
+    const annualized = holdDays > 0 ? (t.pnlPct / holdDays * 365) : null;
+    const annStr = annualized !== null
+      ? `<span style="font-family:var(--mono);font-weight:700;color:${pnlCol}">${sign}${fmt(annualized,1)} %/J</span>`
+      : '—';
+
+    // Format dates nicely
+    const buyDateStr  = buyDt  ? buyDt.toLocaleDateString('de-AT')  : '—';
+    const sellDateStr = sellDt ? sellDt.toLocaleDateString('de-AT') : '—';
+
+    const noteOpen  = t.note_open  || '—';
+    const noteClose = t.note_close || '—';
+
     return `<tr>
       <td><span class="trade-sym" style="color:var(--blue)">${t.symbol}</span></td>
-      <td style="font-family:var(--mono)">${fmtU(t.buy_price)}</td>
-      <td style="font-family:var(--mono)">${fmtU(t.sell_price)}</td>
+      <td>
+        <div style="font-family:var(--mono);font-weight:600">${fmtU(t.buy_price)}</div>
+        <div style="font-size:10px;color:var(--muted2)">${buyDateStr}</div>
+      </td>
+      <td>
+        <div style="font-family:var(--mono);font-weight:600">${fmtU(t.sell_price)}</div>
+        <div style="font-size:10px;color:var(--muted2)">${sellDateStr}</div>
+      </td>
       <td style="font-family:var(--mono)">${fmtQty(t.qty)}</td>
       <td><span class="lev-tag">×${t.lev}</span></td>
       <td style="font-family:var(--mono);font-weight:700;color:${pnlCol}">${sign}${fmtE(t.pnlEur)}</td>
       <td style="font-family:var(--mono);font-weight:700;color:${pnlCol}">${sign}${fmt(t.pnlPct,2)}%</td>
-      <td style="color:var(--muted);font-size:11px">${t.buy_date||'—'} → ${t.sell_date}</td>
-      <td><div class="trade-note" title="${(t.note||'').replace(/"/g,'&quot;')}">${t.note||'—'}</div></td>
+      <td style="color:var(--muted);font-size:11px;white-space:nowrap">${holdStr}</td>
+      <td>${annStr}</td>
+      <td><div class="trade-note" title="${noteOpen.replace(/"/g,'&quot;')}">${noteOpen}</div></td>
+      <td><div class="trade-note" title="${noteClose.replace(/"/g,'&quot;')}">${noteClose}</div></td>
     </tr>`;
   }).join('');
 }
