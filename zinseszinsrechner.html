@@ -365,6 +365,72 @@
 
   /* RIGHT COLUMN — defined in main grid section */
 
+  /* SIMULATION SLOTS */
+  .slot-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .slot-btn {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .slot-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-lighter);
+  }
+  .slot-btn.filled {
+    background: var(--accent-light);
+    border-color: var(--accent2);
+    color: var(--accent);
+  }
+  .slot-btn.filled:hover {
+    background: var(--accent2);
+    color: white;
+    border-color: var(--accent2);
+  }
+  .slot-btn .slot-x {
+    display: none;
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    background: var(--red);
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .slot-btn.filled:hover .slot-x {
+    display: block;
+  }
+  .slot-label {
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.04em;
+    margin-top: 8px;
+  }
+
   /* KPI ROW */
   .kpi-row {
     display: grid;
@@ -715,7 +781,7 @@
     <span id="syncStatus" style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--accent2);transition:color 0.3s;">Verbinde…</span>
     <span class="header-badge">Internes Tool</span>
   </div>
-  <span class="header-version">v1.7</span>
+  <span class="header-version">v1.8</span>
 </header>
 
 <main>
@@ -887,6 +953,12 @@
     <button class="btn btn-primary" onclick="calculate()">
       📊 Berechnen
     </button>
+
+    <!-- SIMULATION SLOTS -->
+    <div>
+      <div class="slot-label">Simulationen speichern / laden</div>
+      <div class="slot-bar" id="slotBar"></div>
+    </div>
 
   </div>
 
@@ -1136,6 +1208,132 @@ let _saveTimer = null;
 function scheduleSave() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(saveSettings, 1200);
+}
+
+// ============================================================
+// SIMULATION SLOTS (10 Slots, Supabase-gespeichert)
+// ============================================================
+const SLOT_COUNT = 10;
+const SLOT_KEY_PREFIX = 'sim_slot_';
+
+// Alle Slot-Daten aus Supabase laden
+async function loadSlotMeta() {
+  const res = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?id=eq.${SB_ID}`, {
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+  });
+  if (!res.ok) return {};
+  const data = await res.json();
+  if (!data.length) return {};
+  const row = data[0];
+  const meta = {};
+  for (let i = 1; i <= SLOT_COUNT; i++) {
+    const key = SLOT_KEY_PREFIX + i;
+    if (row[key]) meta[i] = JSON.parse(row[key]);
+  }
+  return meta;
+}
+
+// Einen Slot speichern
+async function saveSlot(slotNum) {
+  const snapshot = {
+    start_value:    parseFloat(document.getElementById('startValue').value) || 0,
+    rate_value:     parseFloat(document.getElementById('rateInputValue').value) || 0,
+    rate_mode:      document.getElementById('rateInputMode').value,
+    inflation_rate: parseFloat(document.getElementById('inflationRate').value) || 0,
+    tax_mode:       document.getElementById('taxMode').value,
+    tax_rate:       parseFloat(document.getElementById('taxRate')?.value) || 0,
+    start_date:     document.getElementById('startDate').value,
+    deposits:       JSON.stringify(deposits),
+    withdrawals:    JSON.stringify(withdrawals),
+    label:          `Slot ${slotNum === 1 ? '!' : slotNum}`,
+    saved_at:       new Date().toLocaleString('de-AT')
+  };
+  const body = { id: SB_ID };
+  body[SLOT_KEY_PREFIX + slotNum] = JSON.stringify(snapshot);
+  await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify(body)
+  });
+  renderSlots();
+}
+
+// Einen Slot laden
+async function loadSlot(slotNum) {
+  const meta = await loadSlotMeta();
+  const s = meta[slotNum];
+  if (!s) return;
+  document.getElementById('startValue').value      = s.start_value ?? 10000;
+  document.getElementById('rateInputValue').value  = s.rate_value  ?? 1;
+  document.getElementById('rateInputMode').value   = s.rate_mode   ?? 'weekly';
+  document.getElementById('inflationRate').value   = s.inflation_rate ?? 2;
+  document.getElementById('taxMode').value         = s.tax_mode    ?? 'austria';
+  if (s.tax_rate && document.getElementById('taxRate'))
+    document.getElementById('taxRate').value       = s.tax_rate;
+  document.getElementById('startDate').value       = s.start_date  ?? '';
+  deposits    = s.deposits    ? JSON.parse(s.deposits)    : [];
+  withdrawals = s.withdrawals ? JSON.parse(s.withdrawals) : [];
+  renderTxList('depositList',    deposits,    'deposit');
+  renderTxList('withdrawalList', withdrawals, 'withdrawal');
+  const map = {10000:'10k',100000:'100k',250000:'250k'};
+  ['10k','100k','250k'].forEach(k => document.getElementById('qty-'+k).classList.remove('active'));
+  if (map[s.start_value]) document.getElementById('qty-'+map[s.start_value]).classList.add('active');
+  onRateModeChange();
+  onTaxModeChange();
+  calculate();
+}
+
+// Einen Slot löschen
+async function deleteSlot(slotNum) {
+  const body = { id: SB_ID };
+  body[SLOT_KEY_PREFIX + slotNum] = null;
+  await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify(body)
+  });
+  renderSlots();
+}
+
+// Slots rendern
+let _slotMeta = {};
+async function renderSlots() {
+  _slotMeta = await loadSlotMeta();
+  const bar = document.getElementById('slotBar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  for (let i = 1; i <= SLOT_COUNT; i++) {
+    const filled = !!_slotMeta[i];
+    const label  = i === 1 ? '!' : String(i);
+    const btn    = document.createElement('div');
+    btn.className = 'slot-btn' + (filled ? ' filled' : '');
+    btn.title = filled
+      ? `Laden: ${_slotMeta[i].saved_at || ''}
+Klick: laden · X: löschen`
+      : 'Klick: aktuelle Berechnung speichern';
+    btn.innerHTML = label;
+    btn.addEventListener('click', () => filled ? loadSlot(i) : saveSlot(i));
+
+    if (filled) {
+      const x = document.createElement('span');
+      x.className = 'slot-x';
+      x.textContent = '×';
+      x.title = 'Slot löschen';
+      x.addEventListener('click', e => { e.stopPropagation(); deleteSlot(i); });
+      btn.appendChild(x);
+    }
+    bar.appendChild(btn);
+  }
 }
 </script>
 
@@ -2065,6 +2263,7 @@ document.addEventListener('DOMContentLoaded', () => {
   onRateInput();       // sets weeklyRateDecimal=0.01, updates display
   updateAustriaTax();  // show tariff info box
   loadSettings();      // Cloud-Sync: Einstellungen laden (ruft calculate() am Ende auf)
+  renderSlots();       // Simulation-Slots rendern
 });
 </script>
 </body>
