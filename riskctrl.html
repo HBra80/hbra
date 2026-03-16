@@ -698,11 +698,14 @@ function fmtE(e,d=2){return'€ '+fmt(e,d);}
 function fmtU(u,d=2){return'$ '+fmt(u,d);}
 function todayStr(){return new Date().toISOString().split('T')[0];}
 function pctBadge(cur,ref,label){
-  if(!cur||!ref)return'';
+  const labelFull={'T':'Tag','W':'Woche','M':'Monat','J':'Jahr'}[label]||label;
+  if(!cur||!ref){
+    return`<span class="pbadge pbadge-neu" title="${labelFull}"><span style="font-size:8px;opacity:.6">${labelFull}</span> —</span>`;
+  }
   const pct=(cur-ref)/ref*100;
   const sign=pct>0?'+':'';
   const cls=pct>0.1?'pbadge-pos':pct<-0.1?'pbadge-neg':'pbadge-neu';
-  return`<span class="pbadge ${cls}" title="${label}">${sign}${fmt(pct,1)}%<span style="font-size:8px;opacity:.7"> ${label}</span></span>`;
+  return`<span class="pbadge ${cls}" title="${labelFull}"><span style="font-size:8px;opacity:.7">${labelFull} </span>${sign}${fmt(pct,2)}%</span>`;
 }
 
 // ═══════════════════════════
@@ -1039,12 +1042,12 @@ function renderPositions(){
     const curStr=cur!==null?cur:'';
     // Performance badges
     const perf=stockPerf[sym]||{};
-    const perfBadges=cur?[
+    const perfBadges=[
       pctBadge(cur,perf.prevClose,'T'),
       pctBadge(cur,perf.weekClose,'W'),
       pctBadge(cur,perf.monthClose,'M'),
       pctBadge(cur,perf.yearClose,'J')
-    ].filter(Boolean).join(''):'';
+    ].join('');
 
     html+=`<div class="grp" id="grp-${safeId}" draggable="true" ondragstart="onGrpDragStart(event,'${sym}')" ondragover="onGrpDragOver(event,'${sym}')" ondragleave="onGrpDragLeave(event,'${sym}')" ondrop="onGrpDrop(event,'${sym}')">
       <div class="grp-head">
