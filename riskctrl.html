@@ -50,14 +50,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 @media(max-width:600px){#lastUpdateBadge{display:none!important;}}
 
 /* ── DEPOT HEADER STRIP ── */
-.depot-strip{background:var(--white);border-bottom:2px solid var(--blue);padding:8px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.depot-strip{background:var(--white);border-bottom:2px solid var(--blue);padding:6px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
 .depot-strip-label{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;}
 .depot-strip-inputs{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
-.depot-strip-inputs .input-wrap{flex:1;max-width:160px;}
-.depot-strip-inputs input[type=number]{font-family:var(--display);font-size:20px;font-weight:400;letter-spacing:.5px;background:var(--blue-bg);border:1.5px solid var(--blue);color:var(--text);}
-.depot-strip-inputs input[type=date]{font-size:12px;padding:6px 10px;background:var(--surface);border:1.5px solid var(--border);border-radius:7px;outline:none;color:var(--text);font-family:var(--sans);}
-.depot-strip-save{padding:6px 14px;font-size:12px;font-weight:600;background:var(--blue);color:#fff;border:none;border-radius:7px;cursor:pointer;white-space:nowrap;}
-.depot-strip-val{font-family:var(--display);font-size:22px;color:var(--blue);margin-left:4px;}
+.depot-strip-inputs .input-wrap{flex:1;max-width:200px;}
+.depot-strip-inputs input[type=number]{font-family:var(--display);font-size:30px;font-weight:400;letter-spacing:.5px;background:var(--blue-bg);border:1.5px solid var(--blue);color:var(--blue);padding:4px 10px 4px 32px;}
+.depot-strip-inputs input[type=date]{font-size:10px;padding:4px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;outline:none;color:var(--muted);font-family:var(--sans);width:110px;}
+.depot-strip-save{padding:5px 12px;font-size:11px;font-weight:600;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;}
+.depot-strip-val{font-family:var(--display);font-size:30px;color:var(--blue);margin-left:4px;}
 
 /* ── TABS ── */
 .tabs-nav{display:flex;background:var(--white);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
@@ -1040,7 +1040,7 @@ function renderPositions(){
     const signG=pnlG!==null&&pnlG>0?'+':'';
     const clsG=pnlG===null?'sval pnl-neu':pnlG>0?'sval pnl-pos':pnlG<0?'sval pnl-neg':'sval pnl-neu';
     const curStr=cur!==null?cur:'';
-    // Performance badges
+    // Performance badges — immer alle 4 anzeigen
     const perf=stockPerf[sym]||{};
     const perfBadges=[
       pctBadge(cur,perf.prevClose,'T'),
@@ -1056,7 +1056,7 @@ function renderPositions(){
             <span class="drag-handle">⠿</span>
             <span class="gs" style="color:${color}">${sym}${multi?` <span style="font-size:10px;color:var(--muted2)">(${grp.length}×)</span>`:''} <span class="usd-tag">USD</span></span>
           </div>
-          ${perfBadges?`<div class="perf-badges">${perfBadges}</div>`:''}
+          <div class="perf-badges">${perfBadges}</div>
         </div>
         <div class="gt">${fmtE(grpEff)}</div>
         <div class="gm">M: ${fmtE(grpMar)}</div>
