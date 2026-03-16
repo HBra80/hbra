@@ -318,7 +318,97 @@ input::placeholder,textarea::placeholder{color:var(--muted2);}
   <div class="lo-msg" id="loMsg">Verbinde mit Supabase…</div>
 </div>
 
-<!-- SELL MODAL -->
+<!-- DEPOT PFLICHTFELD MODAL -->
+<div id="depotModal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">📅 Depotwert erfassen</div>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+        Für folgende Tage fehlt der Depotwert. Bitte trage ihn nach — er wird für die Performance-Berechnung benötigt.
+      </div>
+      <div id="depotModalDays"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" style="width:auto;padding:8px 16px" onclick="closeDepotModal()">Später</button>
+      <button class="btn btn-primary" style="width:auto;padding:8px 20px" onclick="saveDepotModal()">✓ Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT TRADE MODAL -->
+<div id="editTradeModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeEditTrade()">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">Trade bearbeiten</div>
+      <button class="modal-close" onclick="closeEditTrade()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editTradeId" />
+      <div class="row2">
+        <div class="field">
+          <label class="label">Symbol</label>
+          <input type="text" id="etSymbol" style="padding-left:10px" />
+        </div>
+        <div class="field">
+          <label class="label">Stückanzahl</label>
+          <div class="input-wrap"><span class="pfx">#</span>
+            <input type="number" id="etQty" step="any" /></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="label">Kaufkurs (USD)</label>
+          <div class="input-wrap"><span class="pfx" style="font-size:10px">$</span>
+            <input type="number" id="etBuyPrice" step="0.01" /></div>
+        </div>
+        <div class="field">
+          <label class="label">Verkaufskurs (USD)</label>
+          <div class="input-wrap"><span class="pfx" style="font-size:10px">$</span>
+            <input type="number" id="etSellPrice" step="0.01" /></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="label">Kaufdatum</label>
+          <input type="date" id="etBuyDate" style="padding-left:10px" /></div>
+        <div class="field">
+          <label class="label">Verkaufsdatum</label>
+          <input type="date" id="etSellDate" style="padding-left:10px" /></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="label">Hebel</label>
+          <div class="input-wrap"><span class="pfx">×</span>
+            <input type="number" id="etLev" min="1" /></div>
+        </div>
+        <div class="field">
+          <label class="label">Depot bei Kauf (€)</label>
+          <div class="input-wrap"><span class="pfx">€</span>
+            <input type="number" id="etDepotBuy" /></div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label">Depot bei Verkauf (€)</label>
+        <div class="input-wrap"><span class="pfx">€</span>
+          <input type="number" id="etDepotSell" /></div>
+      </div>
+      <div class="field">
+        <label class="label">Notiz Eröffnung</label>
+        <textarea id="etNoteOpen" rows="2" placeholder="Trade-Idee, Analyse…"></textarea>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label class="label">Notiz Abschluss</label>
+        <textarea id="etNoteClose" rows="2" placeholder="Grund für Abschluss…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" style="width:auto;padding:8px 16px" onclick="closeEditTrade()">Abbrechen</button>
+      <button class="btn btn-save" style="width:auto;padding:8px 20px" onclick="confirmEditTrade()">✓ Speichern</button>
+    </div>
+  </div>
+</div>
 <div id="sellModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeSellModal()">
   <div class="modal">
     <div class="modal-header">
@@ -604,21 +694,24 @@ input::placeholder,textarea::placeholder{color:var(--muted2);}
           <table class="trades-table" id="tradesTable">
             <thead>
               <tr>
+                <th></th>
                 <th>Symbol</th>
-                <th>Kaufkurs / Datum</th>
-                <th>Verkaufskurs / Datum</th>
+                <th>Kauf</th>
+                <th>Verkauf</th>
                 <th>Stück</th>
                 <th>Hebel</th>
+                <th>Depot Kauf</th>
+                <th>Depot Verkauf</th>
                 <th>P&amp;L €</th>
                 <th>P&amp;L %</th>
                 <th>Haltedauer</th>
                 <th>Jahres-Perf.</th>
-                <th>Eröffnungs-Notiz</th>
-                <th>Abschluss-Notiz</th>
+                <th>Notiz Eröffnung</th>
+                <th>Notiz Abschluss</th>
               </tr>
             </thead>
             <tbody id="tradesBody">
-              <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--muted2);">Noch keine abgeschlossenen Trades</td></tr>
+              <tr><td colspan="14" style="text-align:center;padding:24px;color:var(--muted2);">Noch keine abgeschlossenen Trades</td></tr>
             </tbody>
           </table>
         </div>
@@ -731,7 +824,8 @@ async function dbInsertTrade(t) {
       id:t.id, symbol:t.symbol, buy_price:t.buy_price, sell_price:t.sell_price,
       qty:t.qty, lev:t.lev, buy_date:t.buy_date||null, sell_date:t.sell_date,
       note_open:t.note_open||null, note_close:t.note_close||null,
-      depot_value_at_buy:t.depot_value_at_buy||null
+      depot_value_at_buy:t.depot_value_at_buy||null,
+      depot_value_at_sell:t.depot_value_at_sell||null
     })
   });
 }
@@ -946,6 +1040,7 @@ async function confirmSell() {
       note_open: p.note||null,
       note_close: sellNote||null,
       depot_value_at_buy: depot,
+      depot_value_at_sell: depot,
       pnlEur: sellEur - buyEur,
       pnlPct: (sellEur - buyEur)/buyEur*100
     };
@@ -1362,31 +1457,39 @@ function renderJournal() {
     const holdDays = buyDt && sellDt ? Math.round((sellDt - buyDt) / 86400000) : null;
     const holdStr  = holdDays !== null ? holdDays + ' Tag' + (holdDays !== 1 ? 'e' : '') : '—';
 
-    // Annualized performance: (pnlPct / holdDays) * 365
+    // Annualized performance
     const annualized = holdDays > 0 ? (t.pnlPct / holdDays * 365) : null;
     const annStr = annualized !== null
       ? `<span style="font-family:var(--mono);font-weight:700;color:${pnlCol}">${sign}${fmt(annualized,1)} %/J</span>`
-      : '—';
+      : '<span style="color:var(--muted2)">—</span>';
 
-    // Format dates nicely
-    const buyDateStr  = buyDt  ? buyDt.toLocaleDateString('de-AT')  : '—';
-    const sellDateStr = sellDt ? sellDt.toLocaleDateString('de-AT') : '—';
+    // Compact date format: 13.03.26
+    const fmtDateShort = dt => dt ? dt.toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
+    const buyDateStr  = fmtDateShort(buyDt);
+    const sellDateStr = fmtDateShort(sellDt);
+
+    // Depot at sell
+    const depotAtBuy  = t.depot_value_at_buy  ? fmtE(t.depot_value_at_buy)  : '—';
+    const depotAtSell = t.depot_value_at_sell ? fmtE(t.depot_value_at_sell) : '—';
 
     const noteOpen  = t.note_open  || '—';
     const noteClose = t.note_close || '—';
 
     return `<tr>
-      <td><span class="trade-sym" style="color:var(--blue)">${t.symbol}</span></td>
+      <td><button class="ibtn" onclick="openEditTrade('${t.id}')" title="Bearbeiten" style="width:22px;height:22px;font-size:11px">✎</button></td>
+      <td><span class="trade-sym" style="color:var(--blue);font-weight:700">${t.symbol}</span></td>
       <td>
-        <div style="font-family:var(--mono);font-weight:600">${fmtU(t.buy_price)}</div>
-        <div style="font-size:10px;color:var(--muted2)">${buyDateStr}</div>
+        <div style="font-family:var(--mono);font-weight:600;font-size:12px">${fmtU(t.buy_price)}</div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:1px">${buyDateStr}</div>
       </td>
       <td>
-        <div style="font-family:var(--mono);font-weight:600">${fmtU(t.sell_price)}</div>
-        <div style="font-size:10px;color:var(--muted2)">${sellDateStr}</div>
+        <div style="font-family:var(--mono);font-weight:600;font-size:12px">${fmtU(t.sell_price)}</div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:1px">${sellDateStr}</div>
       </td>
-      <td style="font-family:var(--mono)">${fmtQty(t.qty)}</td>
+      <td style="font-family:var(--mono);font-size:12px">${fmtQty(t.qty)}</td>
       <td><span class="lev-tag">×${t.lev}</span></td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${depotAtBuy}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${depotAtSell}</td>
       <td style="font-family:var(--mono);font-weight:700;color:${pnlCol}">${sign}${fmtE(t.pnlEur)}</td>
       <td style="font-family:var(--mono);font-weight:700;color:${pnlCol}">${sign}${fmt(t.pnlPct,2)}%</td>
       <td style="color:var(--muted);font-size:11px;white-space:nowrap">${holdStr}</td>
@@ -1443,8 +1546,142 @@ function startAutoRefresh(){
   autoRefreshTimer=setInterval(()=>{if(positions.length>0)refreshAll();},5*60*1000);
 }
 
-function setLoading(msg){document.getElementById('loMsg').textContent=msg;}
-function hideLoading(){document.getElementById('loadingOverlay').style.display='none';}
+// ═══════════════════════════════════════════════════
+// DEPOT PFLICHTFELD MODAL — fehlende Tage
+// ═══════════════════════════════════════════════════
+function getMissingDepotDays() {
+  if (!depotHistory.length) {
+    // No history at all — just show today
+    return [todayStr()];
+  }
+  const lastDate = new Date(depotHistory[depotHistory.length-1].date + 'T00:00:00');
+  const today = new Date(todayStr() + 'T00:00:00');
+  const missing = [];
+  const d = new Date(lastDate);
+  d.setDate(d.getDate() + 1);
+  while (d <= today) {
+    const iso = d.toISOString().split('T')[0];
+    if (!depotHistory.find(h => h.date === iso)) {
+      missing.push(iso);
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return missing;
+}
+
+function openDepotModal() {
+  const missing = getMissingDepotDays();
+  if (!missing.length) return;
+  const container = document.getElementById('depotModalDays');
+  const currentDepot = document.getElementById('depotValue').value || '';
+  container.innerHTML = missing.map(iso => {
+    const dt = new Date(iso + 'T00:00:00');
+    const label = dt.toLocaleDateString('de-AT', {weekday:'short', day:'2-digit', month:'2-digit', year:'numeric'});
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600;color:var(--text);min-width:160px">${label}</div>
+      <div class="input-wrap" style="flex:1"><span class="pfx">€</span>
+        <input type="number" class="depot-day-inp" data-date="${iso}" placeholder="Depotwert" value="${currentDepot}" />
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('depotModal').style.display = 'flex';
+}
+
+function closeDepotModal() {
+  document.getElementById('depotModal').style.display = 'none';
+}
+
+async function saveDepotModal() {
+  const inputs = document.querySelectorAll('.depot-day-inp');
+  const saves = [];
+  inputs.forEach(inp => {
+    const val = parseFloat(inp.value);
+    const date = inp.dataset.date;
+    if (val > 0 && date) {
+      saves.push({date, val});
+    }
+  });
+  if (!saves.length) { closeDepotModal(); return; }
+  try {
+    await Promise.all(saves.map(s => dbUpsertDepotHistory(s.date, s.val)));
+    saves.forEach(s => {
+      const idx = depotHistory.findIndex(d => d.date === s.date);
+      if (idx !== -1) depotHistory[idx].depot_value = s.val;
+      else depotHistory.push({date: s.date, depot_value: s.val});
+    });
+    depotHistory.sort((a,b) => a.date.localeCompare(b.date));
+    closeDepotModal();
+    setSyncStatus('ok', 'Depotwert gespeichert');
+    if (document.getElementById('tab-journal').classList.contains('active')) renderJournal();
+  } catch(e) { setSyncStatus('err', e.message); }
+}
+
+// ═══════════════════════════════════════════════════
+// EDIT TRADE MODAL
+// ═══════════════════════════════════════════════════
+function openEditTrade(id) {
+  const t = trades.find(x => String(x.id) === String(id));
+  if (!t) return;
+  document.getElementById('editTradeId').value   = t.id;
+  document.getElementById('etSymbol').value      = t.symbol;
+  document.getElementById('etQty').value         = t.qty;
+  document.getElementById('etBuyPrice').value    = t.buy_price;
+  document.getElementById('etSellPrice').value   = t.sell_price;
+  document.getElementById('etBuyDate').value     = t.buy_date  || '';
+  document.getElementById('etSellDate').value    = t.sell_date || '';
+  document.getElementById('etLev').value         = t.lev;
+  document.getElementById('etDepotBuy').value    = t.depot_value_at_buy  || '';
+  document.getElementById('etDepotSell').value   = t.depot_value_at_sell || '';
+  document.getElementById('etNoteOpen').value    = t.note_open  || '';
+  document.getElementById('etNoteClose').value   = t.note_close || '';
+  document.getElementById('editTradeModal').style.display = 'flex';
+}
+
+function closeEditTrade() {
+  document.getElementById('editTradeModal').style.display = 'none';
+}
+
+async function confirmEditTrade() {
+  const id        = document.getElementById('editTradeId').value;
+  const symbol    = document.getElementById('etSymbol').value.trim().toUpperCase();
+  const qty       = parseFloat(document.getElementById('etQty').value);
+  const buyPrice  = parseFloat(document.getElementById('etBuyPrice').value);
+  const sellPrice = parseFloat(document.getElementById('etSellPrice').value);
+  const buyDate   = document.getElementById('etBuyDate').value  || null;
+  const sellDate  = document.getElementById('etSellDate').value || null;
+  const lev       = parseFloat(document.getElementById('etLev').value) || 1;
+  const depotBuy  = parseFloat(document.getElementById('etDepotBuy').value)  || null;
+  const depotSell = parseFloat(document.getElementById('etDepotSell').value) || null;
+  const noteOpen  = document.getElementById('etNoteOpen').value.trim()  || null;
+  const noteClose = document.getElementById('etNoteClose').value.trim() || null;
+  if (!symbol || !(buyPrice>0) || !(sellPrice>0) || !(qty>0)) return;
+
+  const fx = getFx();
+  const buyEur  = (buyPrice * qty) / fx;
+  const sellEur = (sellPrice * qty) / fx;
+  const pnlEur  = sellEur - buyEur;
+  const pnlPct  = pnlEur / buyEur * 100;
+
+  const updated = {id, symbol, buy_price:buyPrice, sell_price:sellPrice, qty, lev,
+    buy_date:buyDate, sell_date:sellDate, note_open:noteOpen, note_close:noteClose,
+    depot_value_at_buy:depotBuy, depot_value_at_sell:depotSell, pnlEur, pnlPct};
+
+  try {
+    await sbFetch('trades?id=eq.'+id, {
+      method:'PATCH', headers:{'Prefer':''},
+      body: JSON.stringify({symbol, buy_price:buyPrice, sell_price:sellPrice, qty, lev,
+        buy_date:buyDate, sell_date:sellDate, note_open:noteOpen, note_close:noteClose,
+        depot_value_at_buy:depotBuy, depot_value_at_sell:depotSell})
+    });
+    const idx = trades.findIndex(t => String(t.id) === String(id));
+    if (idx !== -1) trades[idx] = {...trades[idx], ...updated};
+    closeEditTrade();
+    setSyncStatus('ok', 'Trade aktualisiert');
+    renderJournal();
+  } catch(e) { setSyncStatus('err', e.message); }
+}
+
+
 
 // ═══════════════════════════════════════════════════
 // KEYBOARD
@@ -1469,6 +1706,8 @@ async function init() {
     setSyncStatus('ok','Synchronisiert');
     if(positions.length>0) setTimeout(()=>refreshAll(),500);
     startAutoRefresh();
+    // Check for missing depot days
+    setTimeout(()=>openDepotModal(), 800);
   } catch(e) {
     setLoading(`Fehler: ${e.message}`);
     setSyncStatus('err',e.message);
