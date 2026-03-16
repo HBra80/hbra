@@ -715,7 +715,7 @@
     <span id="syncStatus" style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--accent2);transition:color 0.3s;">Verbinde…</span>
     <span class="header-badge">Internes Tool</span>
   </div>
-  <span class="header-version">v1.0</span>
+  <span class="header-version">v1.6</span>
 </header>
 
 <main>
@@ -1043,8 +1043,8 @@ function gatherSettings() {
   return {
     id: SB_ID,
     start_value:       parseFloat(document.getElementById('startValue').value) || 0,
-    rate_value:        parseFloat(document.getElementById('rateValue').value) || 0,
-    rate_mode:         document.getElementById('rateMode').value,
+    rate_value:        parseFloat(document.getElementById('rateInputValue').value) || 0,
+    rate_mode:         document.getElementById('rateInputMode').value,
     inflation_rate:    parseFloat(document.getElementById('inflationRate').value) || 0,
     tax_mode:          document.getElementById('taxMode').value,
     tax_rate:          parseFloat(document.getElementById('taxRate')?.value) || 0,
@@ -1086,14 +1086,15 @@ async function loadSettings() {
     return;
   }
   const s = data[0];
-  document.getElementById('startValue').value    = s.start_value   ?? 10000;
-  document.getElementById('rateValue').value     = s.rate_value    ?? 1;
-  document.getElementById('rateMode').value      = s.rate_mode     ?? 'weekly';
-  document.getElementById('inflationRate').value = s.inflation_rate ?? 2;
-  document.getElementById('taxMode').value       = s.tax_mode      ?? 'austria';
+  document.getElementById('startValue').value      = s.start_value   ?? 10000;
+  document.getElementById('rateInputValue').value  = s.rate_value    ?? 1;
+  document.getElementById('rateInputMode').value   = s.rate_mode     ?? 'weekly';
+  document.getElementById('inflationRate').value   = s.inflation_rate ?? 2;
+  document.getElementById('taxMode').value         = s.tax_mode      ?? 'austria';
   if (s.tax_rate && document.getElementById('taxRate'))
-    document.getElementById('taxRate').value     = s.tax_rate;
-  document.getElementById('startDate').value     = s.start_date    ?? new Date().toISOString().split('T')[0];
+    document.getElementById('taxRate').value       = s.tax_rate;
+  document.getElementById('startDate').value       = s.start_date    ?? new Date().toISOString().split('T')[0];
+  onTaxModeChange(); // Steuer-UI aktualisieren
 
   // Transaktionen wiederherstellen
   deposits    = s.deposits    ? JSON.parse(s.deposits)    : [];
@@ -1106,6 +1107,7 @@ async function loadSettings() {
   const map = {10000:'10k',100000:'100k',250000:'250k'};
   ['10k','100k','250k'].forEach(k => document.getElementById('qty-'+k).classList.remove('active'));
   if (map[s.start_value]) document.getElementById('qty-'+map[s.start_value]).classList.add('active');
+  onRateModeChange(); // Zinsmodus-UI aktualisieren
 
   onRateInput();
   updateAustriaTax();
