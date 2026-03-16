@@ -711,7 +711,10 @@
     <div class="logo-icon">📈</div>
     <span class="logo-text">Zinseszinsrechner</span>
   </div>
-  <span class="header-badge">Internes Tool</span>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="syncStatus" style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--accent2);transition:color 0.3s;">Verbinde…</span>
+    <span class="header-badge">Internes Tool</span>
+  </div>
   <span class="header-version">v1.0</span>
 </header>
 
@@ -1007,6 +1010,132 @@
 
   </div>
 </main>
+
+<script>
+// ============================================================
+// SUPABASE — Cloud Sync
+// ============================================================
+const SB_URL = 'https://cltfjarsnvpxgzlirtiv.supabase.co';
+const SB_KEY = 'sb_publishable_byQd1o0fr8OV6Ho00egN8Q_Ha5pxIGj';
+const SB_TABLE = 'zinseszins_settings';
+const SB_ID = 1; // single-row config
+
+async function sbFetch(method, body = null) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Prefer': method === 'POST' ? 'resolution=merge-duplicates' : ''
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const url = `${SB_URL}/rest/v1/${SB_TABLE}?id=eq.${SB_ID}`;
+  const res = await fetch(method === 'POST' ? `${SB_URL}/rest/v1/${SB_TABLE}` : url, opts);
+  if (!res.ok) return null;
+  const data = method === 'GET' ? await res.json() : null;
+  return data;
+}
+
+// Alle Eingaben lesen
+function gatherSettings() {
+  return {
+    id: SB_ID,
+    start_value:       parseFloat(document.getElementById('startValue').value) || 0,
+    rate_value:        parseFloat(document.getElementById('rateValue').value) || 0,
+    rate_mode:         document.getElementById('rateMode').value,
+    inflation_rate:    parseFloat(document.getElementById('inflationRate').value) || 0,
+    tax_mode:          document.getElementById('taxMode').value,
+    tax_rate:          parseFloat(document.getElementById('taxRate')?.value) || 0,
+    start_date:        document.getElementById('startDate').value,
+    deposits:          JSON.stringify(deposits),
+    withdrawals:       JSON.stringify(withdrawals),
+    updated_at:        new Date().toISOString()
+  };
+}
+
+// Einstellungen speichern
+async function saveSettings() {
+  setSyncStatus('saving');
+  const data = gatherSettings();
+  const res = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify(data)
+  });
+  if (res.ok) {
+    setSyncStatus('saved');
+    setTimeout(() => setSyncStatus('idle'), 2000);
+  } else {
+    setSyncStatus('error');
+  }
+}
+
+// Einstellungen laden
+async function loadSettings() {
+  setSyncStatus('loading');
+  const data = await sbFetch('GET');
+  if (!data || data.length === 0) {
+    setSyncStatus('idle');
+    return;
+  }
+  const s = data[0];
+  document.getElementById('startValue').value    = s.start_value   ?? 10000;
+  document.getElementById('rateValue').value     = s.rate_value    ?? 1;
+  document.getElementById('rateMode').value      = s.rate_mode     ?? 'weekly';
+  document.getElementById('inflationRate').value = s.inflation_rate ?? 2;
+  document.getElementById('taxMode').value       = s.tax_mode      ?? 'austria';
+  if (s.tax_rate && document.getElementById('taxRate'))
+    document.getElementById('taxRate').value     = s.tax_rate;
+  document.getElementById('startDate').value     = s.start_date    ?? new Date().toISOString().split('T')[0];
+
+  // Transaktionen wiederherstellen
+  deposits    = s.deposits    ? JSON.parse(s.deposits)    : [];
+  withdrawals = s.withdrawals ? JSON.parse(s.withdrawals) : [];
+  renderTxList('depositList',    deposits,    'deposit');
+  renderTxList('withdrawalList', withdrawals, 'withdrawal');
+  scheduleSave();
+
+  // UI aktualisieren
+  const map = {10000:'10k',100000:'100k',250000:'250k'};
+  ['10k','100k','250k'].forEach(k => document.getElementById('qty-'+k).classList.remove('active'));
+  if (map[s.start_value]) document.getElementById('qty-'+map[s.start_value]).classList.add('active');
+
+  onRateInput();
+  updateAustriaTax();
+  calculate();
+  setSyncStatus('idle');
+}
+
+// Sync-Status Anzeige
+function setSyncStatus(state) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  const states = {
+    idle:    { text: 'Synchronisiert',    color: 'var(--accent2)' },
+    saving:  { text: 'Speichern …',       color: 'var(--amber)' },
+    saved:   { text: '✓ Gespeichert',     color: 'var(--accent2)' },
+    loading: { text: 'Laden …',           color: 'var(--amber)' },
+    error:   { text: '✗ Sync-Fehler',     color: 'var(--red)' },
+  };
+  const s = states[state] || states.idle;
+  el.textContent = s.text;
+  el.style.color = s.color;
+}
+
+// Auto-save nach jeder Berechnung (debounced)
+let _saveTimer = null;
+function scheduleSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(saveSettings, 1200);
+}
+</script>
 
 <script>
 // ============================================================
@@ -1505,6 +1634,7 @@ function renderResults(yearData, extraData, startValue) {
   renderTargetProfit();
 
   document.getElementById('targetPanel').style.display = '';
+  scheduleSave();
 }
 
 function toggleExtra(btn) {
@@ -1932,7 +2062,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('qty-10k').classList.add('active');
   onRateInput();       // sets weeklyRateDecimal=0.01, updates display
   updateAustriaTax();  // show tariff info box
-  calculate();
+  loadSettings();      // Cloud-Sync: Einstellungen laden (ruft calculate() am Ende auf)
 });
 </script>
 </body>
