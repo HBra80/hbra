@@ -1693,6 +1693,9 @@ async function confirmEditTrade() {
   });
 });
 
+function setLoading(msg){document.getElementById('loMsg').textContent=msg;}
+function hideLoading(){document.getElementById('loadingOverlay').style.display='none';}
+
 // ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
