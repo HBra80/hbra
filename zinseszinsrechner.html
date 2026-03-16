@@ -292,27 +292,40 @@
   .transaction-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
+    gap: 6px;
+    padding: 7px 8px;
     border-radius: 8px;
     border: 1px solid var(--border);
     background: var(--surface2);
     font-size: 13px;
     transition: background 0.1s;
+    overflow: hidden;
   }
 
   .transaction-item.deposit { border-left: 3px solid var(--accent); }
   .transaction-item.withdrawal { border-left: 3px solid var(--red); }
 
-  .tx-date { color: var(--text2); font-size: 12px; flex: 1; }
-  .tx-amount { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tx-date {
+    color: var(--text2);
+    font-size: 12px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .tx-amount {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    margin-left: auto;
+    white-space: nowrap;
+  }
   .tx-amount.deposit { color: var(--accent); }
   .tx-amount.withdrawal { color: var(--red); }
 
   .btn-remove {
     background: none; border: none; cursor: pointer;
-    color: var(--text3); font-size: 14px; padding: 2px 4px;
+    color: var(--text3); font-size: 14px; padding: 2px 5px;
     border-radius: 4px; line-height: 1;
+    flex-shrink: 0;
     transition: color 0.1s, background 0.1s;
   }
   .btn-remove:hover { color: var(--red); background: var(--red-light); }
@@ -624,12 +637,16 @@
   .tx-recur {
     font-size: 10px;
     font-weight: 600;
-    padding: 2px 6px;
+    padding: 2px 5px;
     border-radius: 4px;
     background: var(--blue-light);
     color: var(--blue);
     white-space: nowrap;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
   }
 
   /* MILESTONE */
@@ -781,7 +798,7 @@
     <span id="syncStatus" style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--accent2);transition:color 0.3s;">Verbinde…</span>
     <span class="header-badge">Internes Tool</span>
   </div>
-  <span class="header-version">v1.8</span>
+  <span class="header-version">v2.0</span>
 </header>
 
 <main>
@@ -1151,6 +1168,7 @@ async function saveSettings() {
 
 // Einstellungen laden
 async function loadSettings() {
+  window._suppressSave = true;
   setSyncStatus('loading');
   const data = await sbFetch('GET');
   if (!data || data.length === 0) {
@@ -1185,6 +1203,7 @@ async function loadSettings() {
   updateAustriaTax();
   calculate();
   setSyncStatus('idle');
+  window._suppressSave = false; // Laden fertig
 }
 
 // Sync-Status Anzeige
@@ -1206,6 +1225,7 @@ function setSyncStatus(state) {
 // Auto-save nach jeder Berechnung (debounced)
 let _saveTimer = null;
 function scheduleSave() {
+  if (window._suppressSave) return;
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(saveSettings, 1200);
 }
@@ -1314,7 +1334,7 @@ async function renderSlots() {
   bar.innerHTML = '';
   for (let i = 1; i <= SLOT_COUNT; i++) {
     const filled = !!_slotMeta[i];
-    const label  = i === 1 ? '!' : String(i);
+    const label  = String(i);
     const btn    = document.createElement('div');
     btn.className = 'slot-btn' + (filled ? ' filled' : '');
     btn.title = filled
