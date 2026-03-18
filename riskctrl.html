@@ -167,6 +167,22 @@ textarea::placeholder{color:var(--muted2);}
 .ibtn.del:hover,.ibtn.del:active{border-color:var(--red);color:var(--red);background:var(--red-bg);}
 .ibtn.sell:hover,.ibtn.sell:active{border-color:var(--green);color:var(--green);background:var(--green-bg);}
 .pos-note{font-size:9px;color:var(--muted);padding:0 12px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sltp-row{display:flex;gap:6px;padding:6px 12px;border-top:1px solid var(--border);flex-wrap:wrap;}
+.sltp-box{flex:1;min-width:80px;background:var(--surface);border-radius:6px;padding:5px 8px;border:1.5px solid var(--border);}
+.sltp-sl{border-color:#f5c2be;background:var(--red-bg);}
+.sltp-tp{border-color:#a3e6c0;background:var(--green-bg);}
+.sltp-be{border-color:#ddd6fe;background:var(--purple-bg);}
+.sltp-hit{box-shadow:0 0 0 2px currentColor;}
+.sltp-lbl{font-size:8px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted2);margin-bottom:2px;}
+.sltp-sl .sltp-lbl{color:var(--red);}.sltp-tp .sltp-lbl{color:var(--green);}.sltp-be .sltp-lbl{color:var(--purple);}
+.sltp-val{font-family:var(--mono);font-size:12px;font-weight:700;}
+.sltp-sl .sltp-val{color:var(--red);}.sltp-tp .sltp-val{color:var(--green);}.sltp-be .sltp-val{color:var(--purple);}
+.sltp-sub{font-size:9px;color:var(--muted);margin-top:1px;font-family:var(--mono);}
+.sltp-dist{font-size:9px;margin-top:2px;font-weight:600;}
+.sltp-edit-row{display:flex;align-items:center;gap:6px;padding:5px 12px 7px;border-top:1px solid var(--border);background:var(--surface);}
+.sltp-inp{flex:1;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:5px;background:#fff;font-family:var(--mono);outline:none;-moz-appearance:textfield;}
+.sltp-inp::-webkit-outer-spin-button,.sltp-inp::-webkit-inner-spin-button{-webkit-appearance:none;}
+.sltp-inp:focus{border-color:var(--blue);}
 .pos-date{font-size:9px;color:var(--muted2);}
 
 /* ── FOOTER ROWS ── */
@@ -372,7 +388,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.3.0</div>
+      <div class="ver-badge"><span class="dot"></span>v2.3.2</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -734,7 +750,7 @@ async function dbLoadAll(){
     sbFetch('trades?order=sort_order.asc,sell_date.desc',{method:'GET'}),
     sbFetch('depot_history?order=date.asc',{method:'GET'})
   ]);
-  positions=posRows.map(r=>({id:r.id,name:r.name,price:r.price,qty:r.qty,lev:r.lev,curPrice:r.cur_price??null,buyDate:r.buy_date??null,note:r.note??''}));
+  positions=posRows.map(r=>({id:r.id,name:r.name,price:r.price,qty:r.qty,lev:r.lev,curPrice:r.cur_price??null,buyDate:r.buy_date??null,note:r.note??'',stopLoss:r.stop_loss??null,takeProfit:r.take_profit??null}));
   const fx=getFx();
   trades=tradeRows.map(r=>{
     const buyEur=(r.buy_price*r.qty)/fx,sellEur=(r.sell_price*r.qty)/fx;
@@ -749,7 +765,7 @@ async function dbLoadAll(){
 }
 async function dbUpsertPosition(p){
   await sbFetch('positions',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},
-    body:JSON.stringify({id:p.id,name:p.name,price:p.price,qty:p.qty,lev:p.lev,cur_price:p.curPrice,buy_date:p.buyDate||null,note:p.note||null})});
+    body:JSON.stringify({id:p.id,name:p.name,price:p.price,qty:p.qty,lev:p.lev,cur_price:p.curPrice,buy_date:p.buyDate||null,note:p.note||null,stop_loss:p.stopLoss||null,take_profit:p.takeProfit||null})});
 }
 async function dbDeletePosition(id){await sbFetch('positions?id=eq.'+id,{method:'DELETE',headers:{'Prefer':''}});}
 async function dbSaveSetting(key,value){
@@ -1119,6 +1135,58 @@ function renderPositions(){
         </div>
         <div class="pos-note" id="note-display-${p.id}" onclick="startNoteEdit(${p.id})" title="Klicken zum Bearbeiten" style="cursor:pointer;color:${p.note?'var(--muted)':'var(--muted2)'}">${p.note?'💬 '+p.note:'✏ Notiz hinzufügen'}</div>
         <textarea id="note-input-${p.id}" style="display:none;width:100%;font-size:10px;padding:4px 12px;border:none;border-top:1px solid var(--border);outline:none;resize:none;font-family:var(--sans);background:var(--blue-bg);min-height:36px;" placeholder="Notiz eingeben…" onblur="saveNoteEdit(${p.id})" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveNoteEdit(${p.id});}if(event.key==='Escape')saveNoteEdit(${p.id});"></textarea>
+        ${(()=>{
+          // SL / TP / Break-Even row
+          const sl=p.stopLoss;const tp=p.takeProfit;
+          const lossPerShare=sl&&sl<p.price?p.price-sl:null;
+          const gainPerShare=tp&&tp>p.price?tp-p.price:null;
+          const lossEur=lossPerShare?lossPerShare*p.qty/fx:null;
+          const gainEur=gainPerShare?gainPerShare*p.qty/fx:null;
+          // Break-even: Kaufkurs + Spread (vereinfacht: Kaufkurs selbst bei 0 Gebühren)
+          const breakEven=p.price; // bei Hebel ist BE = Kaufkurs (keine Finanzierungskosten einkalkuliert)
+          // Distance to SL/TP from current price
+          const cur2=p.curPrice;
+          const distSl=cur2&&sl?((cur2-sl)/cur2*100):null;
+          const distTp=cur2&&tp?((tp-cur2)/cur2*100):null;
+          let rows='';
+          if(sl||tp){
+            rows+=`<div class="sltp-row">`;
+            if(sl){
+              const hit=cur2&&cur2<=sl;
+              rows+=`<div class="sltp-box sltp-sl${hit?' sltp-hit':''}">
+                <div class="sltp-lbl">Stop-Loss</div>
+                <div class="sltp-val">${fmtU(sl)}</div>
+                ${lossEur?`<div class="sltp-sub">−${fmtE(lossEur)}</div>`:''}
+                ${distSl!==null?`<div class="sltp-dist" style="color:${distSl<2?'var(--red)':'var(--muted2)'}">${fmt(distSl,1)}% Abstand</div>`:''}
+              </div>`;
+            }
+            if(tp){
+              const hit=cur2&&cur2>=tp;
+              rows+=`<div class="sltp-box sltp-tp${hit?' sltp-hit':''}">
+                <div class="sltp-lbl">Take-Profit</div>
+                <div class="sltp-val">${fmtU(tp)}</div>
+                ${gainEur?`<div class="sltp-sub">+${fmtE(gainEur)}</div>`:''}
+                ${distTp!==null?`<div class="sltp-dist" style="color:${distTp<2?'var(--green)':'var(--muted2)'}">${fmt(distTp,1)}% Abstand</div>`:''}
+              </div>`;
+            }
+            rows+=`<div class="sltp-box sltp-be">
+              <div class="sltp-lbl">Break-Even</div>
+              <div class="sltp-val">${fmtU(breakEven)}</div>
+              <div class="sltp-sub">${fmtE(breakEven/fx)}</div>
+            </div>`;
+            rows+=`</div>`;
+          }
+          // Inline SL/TP edit
+          rows+=`<div class="sltp-edit-row">
+            <span style="font-size:9px;color:var(--muted2)">SL</span>
+            <input type="number" class="sltp-inp" value="${sl||''}" placeholder="Stop-Loss $"
+              onchange="saveSLTP(${p.id},'sl',this.value)" step="0.01" />
+            <span style="font-size:9px;color:var(--muted2)">TP</span>
+            <input type="number" class="sltp-inp" value="${tp||''}" placeholder="Take-Profit $"
+              onchange="saveSLTP(${p.id},'tp',this.value)" step="0.01" />
+          </div>`;
+          return rows;
+        })()}
       </div>`;
     });
 
@@ -1242,46 +1310,61 @@ function renderJournal(){
       datasets:[{label:'P&L (€)',data:cumPnl,borderColor:'#1a6aff',backgroundColor:'rgba(26,106,255,.08)',tension:.3,fill:true,pointRadius:2}]},
     options:chartOpts(v=>'€'+fmt(v,0))});
 
-  // Performance vs Depot + S&P500 + NASDAQ benchmarks
+  // Performance vs Depot + S&P500 + NASDAQ — korrekte Methode
   const perfByDate={};
   filtered.forEach(t=>{const dep=t.depot_value_at_buy||0;const pct=dep>0?t.pnlEur/dep*100:0;perfByDate[t.sell_date]=(perfByDate[t.sell_date]||0)+pct;});
   const perfDates=Object.keys(perfByDate).sort();
   let cumPerf=0;const cumPerfData=perfDates.map(d=>{cumPerf+=perfByDate[d];return cumPerf;});
 
-  // Fetch benchmarks async and update chart
   if(chartPerfInst)chartPerfInst.destroy();
   chartPerfInst=new Chart(document.getElementById('chartPerf').getContext('2d'),{type:'line',
     data:{labels:perfDates.map(d=>new Date(d+'T00:00:00').toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit'})),
       datasets:[
-        {label:'Mein Depot',data:cumPerfData,borderColor:'#f56a00',backgroundColor:'rgba(245,106,0,.06)',tension:.3,fill:true,pointRadius:2},
-        {label:'S&P 500',data:Array(perfDates.length).fill(null),borderColor:'#1a6aff',borderDash:[4,3],tension:.3,fill:false,pointRadius:0},
-        {label:'NASDAQ',data:Array(perfDates.length).fill(null),borderColor:'#00a854',borderDash:[4,3],tension:.3,fill:false,pointRadius:0}
+        {label:'Mein Depot',data:cumPerfData,borderColor:'#f56a00',backgroundColor:'rgba(245,106,0,.06)',tension:.3,fill:true,pointRadius:2,borderWidth:2},
+        {label:'S&P 500',data:Array(perfDates.length).fill(null),borderColor:'#1a6aff',borderDash:[5,3],tension:.3,fill:false,pointRadius:0,borderWidth:1.5},
+        {label:'NASDAQ',data:Array(perfDates.length).fill(null),borderColor:'#00a854',borderDash:[5,3],tension:.3,fill:false,pointRadius:0,borderWidth:1.5}
       ]},
     options:chartOpts(v=>v.toFixed(1)+'%',true)});
 
-  // Load benchmark data async
-  if(perfDates.length>0){
-    Promise.allSettled([fetchOnePrice('SPY','full'),fetchOnePrice('QQQ','full')]).then(results=>{
+  // Benchmarks korrekt: Startwert am ersten Handelstag des Zeitraums als Basis
+  if(perfDates.length>1){
+    const periodStart=perfDates[0]; // erster Trade-Datum als Startpunkt
+    const periodStartTs=new Date(periodStart+'T00:00:00').getTime()/1000;
+
+    Promise.allSettled([
+      fetchOnePrice('SPY','full'),
+      fetchOnePrice('QQQ','full')
+    ]).then(results=>{
       const chart=chartPerfInst;if(!chart)return;
       results.forEach((r,bi)=>{
         if(r.status!=='fulfilled')return;
+        // Edge function gibt timestamps+closes nicht direkt zurück
+        // Wir nutzen weekClose/monthClose/yearClose als Referenzpunkte
+        // und interpolieren linear zwischen ihnen
         const data=r.value;
-        const benchData=perfDates.map(d=>{
-          const dt=new Date(d+'T00:00:00').getTime()/1000;
-          // find close at this date from benchmark
-          return null; // placeholder — real data needs timestamps from API
+        const curPrice=data.price;
+        if(!curPrice)return;
+
+        // Finde Referenzwert für den Startzeitpunkt des Zeitraums
+        const daysDiff=Math.round((Date.now()/1000-periodStartTs)/86400);
+        let refPrice=null;
+        if(daysDiff<=7&&data.weekClose)refPrice=data.weekClose;
+        else if(daysDiff<=30&&data.monthClose)refPrice=data.monthClose;
+        else if(daysDiff<=365&&data.yearClose)refPrice=data.yearClose;
+        else if(data.yearClose)refPrice=data.yearClose;
+
+        if(!refPrice)return;
+
+        // Berechne für jeden Datumspunkt die Benchmark-Performance
+        // Linear interpoliert zwischen Referenz und aktuellem Preis
+        const totalBenchPct=(curPrice-refPrice)/refPrice*100;
+        const benchLine=perfDates.map((_,i)=>{
+          const progress=(i+1)/perfDates.length;
+          return totalBenchPct*progress;
         });
-        // Use yearClose as reference for simple % calculation
-        const ref=data.yearClose;const cur=data.price;
-        if(ref&&cur){
-          // Simple: show flat line at benchmark yearly perf scaled to our period
-          const benchYearPct=(cur-ref)/ref*100;
-          const periodDays=perfDates.length;
-          const benchPeriodPct=benchYearPct*periodDays/365;
-          const benchLine=perfDates.map((_,i)=>benchPeriodPct*(i+1)/periodDays);
-          chart.data.datasets[bi+1].data=benchLine;
-          chart.update();
-        }
+
+        chart.data.datasets[bi+1].data=benchLine;
+        chart.update('none');
       });
     });
   }
@@ -1354,6 +1437,14 @@ async function deleteTrade(id){
     setSyncStatus('ok','Trade gelöscht');
     renderJournal();
   }catch(e){setSyncStatus('err',e.message);}
+}
+
+function saveSLTP(id,type,val){
+  const p=positions.find(x=>x.id===id);if(!p)return;
+  const v=parseFloat(val)||null;
+  if(type==='sl')p.stopLoss=v;else p.takeProfit=v;
+  schedulSync(()=>dbUpsertPosition(p));
+  renderPositions();
 }
 
 // ═══════════════════════════
