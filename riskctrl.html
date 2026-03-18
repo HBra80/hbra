@@ -372,7 +372,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.2.0</div>
+      <div class="ver-badge"><span class="dot"></span>v2.3.0</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -561,10 +561,14 @@ textarea::placeholder{color:var(--muted2);}
         </div>
         <div>
           <div class="chart-wrap">
-            <div class="chart-title">Performance vs. Depot (%)</div>
+            <div class="chart-title">Performance vs. Depot · S&amp;P500 · NASDAQ (%)</div>
             <canvas id="chartPerf"></canvas>
           </div>
         </div>
+      </div>
+      <div class="chart-wrap" style="margin-bottom:16px">
+        <div class="chart-title">Depotwert-Entwicklung (€)</div>
+        <canvas id="chartDepot"></canvas>
       </div>
 
       <!-- TRADES TABLE -->
@@ -683,7 +687,19 @@ let depotHistory=[];
 let editId=null;
 let sellTarget=null;
 let currentPeriod='all';
-let chartPnlInst=null,chartPerfInst=null;
+let chartPnlInst=null,chartPerfInst=null,chartDepotInst=null;
+
+function filterDepotByPeriod(histData){
+  const now=new Date();
+  let from=null;
+  if(currentPeriod==='today'){from=todayStr();}
+  else if(currentPeriod==='week'){const d=new Date(now);d.setDate(d.getDate()-7);from=d.toISOString().split('T')[0];}
+  else if(currentPeriod==='month'){const d=new Date(now);d.setMonth(d.getMonth()-1);from=d.toISOString().split('T')[0];}
+  else if(currentPeriod==='year'){from=now.getFullYear()+'-01-01';}
+  else if(currentPeriod==='custom'){from=document.getElementById('filterFrom')?.value||null;}
+  if(!from)return histData;
+  return histData.filter(d=>d.date>=from);
+}
 const COLORS=['#1a6aff','#f56a00','#00a854','#d93025','#7c3aed','#0891b2','#c2410c','#15803d','#b45309','#6d28d9'];
 // stockPerf[sym] = {prevClose, weekClose, monthClose, yearClose}
 let stockPerf={};
@@ -715,7 +731,7 @@ async function dbLoadAll(){
   const[posRows,setRows,tradeRows,histRows]=await Promise.all([
     sbFetch('positions?order=sort_order.asc,id.asc',{method:'GET'}),
     sbFetch('settings',{method:'GET'}),
-    sbFetch('trades?order=sell_date.desc',{method:'GET'}),
+    sbFetch('trades?order=sort_order.asc,sell_date.desc',{method:'GET'}),
     sbFetch('depot_history?order=date.asc',{method:'GET'})
   ]);
   positions=posRows.map(r=>({id:r.id,name:r.name,price:r.price,qty:r.qty,lev:r.lev,curPrice:r.cur_price??null,buyDate:r.buy_date??null,note:r.note??''}));
@@ -746,7 +762,11 @@ async function dbInsertTrade(t){
   await sbFetch('trades',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},
     body:JSON.stringify({id:t.id,symbol:t.symbol,buy_price:t.buy_price,sell_price:t.sell_price,qty:t.qty,lev:t.lev,
       buy_date:t.buy_date||null,sell_date:t.sell_date,note_open:t.note_open||null,note_close:t.note_close||null,
-      depot_value_at_buy:t.depot_value_at_buy||null,depot_value_at_sell:t.depot_value_at_sell||null})});
+      depot_value_at_buy:t.depot_value_at_buy||null,depot_value_at_sell:t.depot_value_at_sell||null,sort_order:t.sort_order||0})});
+}
+async function dbDeleteTrade(id){await sbFetch('trades?id=eq.'+id,{method:'DELETE',headers:{'Prefer':''}});}
+async function dbUpdateTradeOrder(tradeList){
+  await Promise.all(tradeList.map((t,i)=>sbFetch('trades?id=eq.'+t.id,{method:'PATCH',headers:{'Prefer':''},body:JSON.stringify({sort_order:i})})));
 }
 async function dbUpsertDepotHistory(date,value){
   await sbFetch('depot_history',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify({date,depot_value:value})});
@@ -1032,6 +1052,9 @@ function renderPositions(){
   order.forEach(sym=>{
     const grp=groups[sym];const safeId=sym.replace(/[^a-z0-9]/gi,'_');const color=colorMap[sym];const multi=grp.length>1;
     const cur=grp[0].curPrice;
+    // Weighted avg buy price
+    const totalQtyGrp=grp.reduce((s,p)=>s+p.qty,0);
+    const avgBuyUsd=totalQtyGrp>0?grp.reduce((s,p)=>s+p.price*p.qty,0)/totalQtyGrp:0;
     const grpBuy=grp.reduce((s,p)=>s+(p.price*p.qty)/fx,0);
     const grpEff=grp.reduce((s,p)=>{const e=cur!==null?cur*p.qty:p.price*p.qty;return s+e/fx;},0);
     const grpMar=grp.reduce((s,p)=>{const e=cur!==null?cur*p.qty:p.price*p.qty;return s+(e/fx)/p.lev;},0);
@@ -1055,6 +1078,7 @@ function renderPositions(){
           <div style="display:flex;align-items:center;gap:6px">
             <span class="drag-handle">⠿</span>
             <span class="gs" style="color:${color}">${sym}${multi?` <span style="font-size:10px;color:var(--muted2)">(${grp.length}×)</span>`:''} <span class="usd-tag">USD</span></span>
+            ${multi?`<div style="font-size:9px;color:var(--muted2);margin-top:1px">Ø Kauf: <span style="font-family:var(--mono);font-weight:600">${fmtU(avgBuyUsd)}</span></div>`:''}
           </div>
           <div class="perf-badges">${perfBadges}</div>
         </div>
@@ -1093,7 +1117,8 @@ function renderPositions(){
             <button class="ibtn del" onclick="deletePos(${p.id})">✕</button>
           </div>
         </div>
-        ${p.note?`<div class="pos-note" title="${p.note.replace(/"/g,'&quot;')}">💬 ${p.note}</div>`:''}
+        <div class="pos-note" id="note-display-${p.id}" onclick="startNoteEdit(${p.id})" title="Klicken zum Bearbeiten" style="cursor:pointer;color:${p.note?'var(--muted)':'var(--muted2)'}">${p.note?'💬 '+p.note:'✏ Notiz hinzufügen'}</div>
+        <textarea id="note-input-${p.id}" style="display:none;width:100%;font-size:10px;padding:4px 12px;border:none;border-top:1px solid var(--border);outline:none;resize:none;font-family:var(--sans);background:var(--blue-bg);min-height:36px;" placeholder="Notiz eingeben…" onblur="saveNoteEdit(${p.id})" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveNoteEdit(${p.id});}if(event.key==='Escape')saveNoteEdit(${p.id});"></textarea>
       </div>`;
     });
 
@@ -1201,25 +1226,84 @@ function renderJournal(){
   document.getElementById('jAvgPnl').textContent=filtered.length?(avgPnl>0?'+':'')+fmtE(avgPnl)+' Ø':'—';
   document.getElementById('tradesCount').textContent=filtered.length+' Trades';
 
-  // Charts
+  // ── CHARTS ──
+  const chartOpts=(yFmt,showLegend=false)=>({responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:showLegend,position:'top',labels:{font:{size:10},boxWidth:12}}},
+    scales:{x:{ticks:{font:{size:10},maxTicksLimit:6}},y:{ticks:{font:{size:10},callback:yFmt}}}});
+
+  // P&L chart
   const byDate={};
   filtered.forEach(t=>{byDate[t.sell_date]=(byDate[t.sell_date]||0)+t.pnlEur;});
   const dates=Object.keys(byDate).sort();
   let cum=0;const cumPnl=dates.map(d=>{cum+=byDate[d];return cum;});
+  if(chartPnlInst)chartPnlInst.destroy();
+  chartPnlInst=new Chart(document.getElementById('chartPnl').getContext('2d'),{type:'line',
+    data:{labels:dates.map(d=>new Date(d+'T00:00:00').toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit'})),
+      datasets:[{label:'P&L (€)',data:cumPnl,borderColor:'#1a6aff',backgroundColor:'rgba(26,106,255,.08)',tension:.3,fill:true,pointRadius:2}]},
+    options:chartOpts(v=>'€'+fmt(v,0))});
+
+  // Performance vs Depot + S&P500 + NASDAQ benchmarks
   const perfByDate={};
   filtered.forEach(t=>{const dep=t.depot_value_at_buy||0;const pct=dep>0?t.pnlEur/dep*100:0;perfByDate[t.sell_date]=(perfByDate[t.sell_date]||0)+pct;});
   const perfDates=Object.keys(perfByDate).sort();
   let cumPerf=0;const cumPerfData=perfDates.map(d=>{cumPerf+=perfByDate[d];return cumPerf;});
 
-  const chartOpts=(yFmt)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:6}},y:{ticks:{font:{size:10},callback:yFmt}}}});
-  if(chartPnlInst)chartPnlInst.destroy();
-  chartPnlInst=new Chart(document.getElementById('chartPnl').getContext('2d'),{type:'line',data:{labels:dates.map(d=>new Date(d+'T00:00:00').toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit'})),datasets:[{data:cumPnl,borderColor:'#1a6aff',backgroundColor:'rgba(26,106,255,.08)',tension:.3,fill:true,pointRadius:2}]},options:chartOpts(v=>'€'+fmt(v,0))});
+  // Fetch benchmarks async and update chart
   if(chartPerfInst)chartPerfInst.destroy();
-  chartPerfInst=new Chart(document.getElementById('chartPerf').getContext('2d'),{type:'line',data:{labels:perfDates.map(d=>new Date(d+'T00:00:00').toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit'})),datasets:[{data:cumPerfData,borderColor:'#f56a00',backgroundColor:'rgba(245,106,0,.08)',tension:.3,fill:true,pointRadius:2}]},options:chartOpts(v=>v.toFixed(2)+'%')});
+  chartPerfInst=new Chart(document.getElementById('chartPerf').getContext('2d'),{type:'line',
+    data:{labels:perfDates.map(d=>new Date(d+'T00:00:00').toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit'})),
+      datasets:[
+        {label:'Mein Depot',data:cumPerfData,borderColor:'#f56a00',backgroundColor:'rgba(245,106,0,.06)',tension:.3,fill:true,pointRadius:2},
+        {label:'S&P 500',data:Array(perfDates.length).fill(null),borderColor:'#1a6aff',borderDash:[4,3],tension:.3,fill:false,pointRadius:0},
+        {label:'NASDAQ',data:Array(perfDates.length).fill(null),borderColor:'#00a854',borderDash:[4,3],tension:.3,fill:false,pointRadius:0}
+      ]},
+    options:chartOpts(v=>v.toFixed(1)+'%',true)});
 
-  // Table
+  // Load benchmark data async
+  if(perfDates.length>0){
+    Promise.allSettled([fetchOnePrice('SPY','full'),fetchOnePrice('QQQ','full')]).then(results=>{
+      const chart=chartPerfInst;if(!chart)return;
+      results.forEach((r,bi)=>{
+        if(r.status!=='fulfilled')return;
+        const data=r.value;
+        const benchData=perfDates.map(d=>{
+          const dt=new Date(d+'T00:00:00').getTime()/1000;
+          // find close at this date from benchmark
+          return null; // placeholder — real data needs timestamps from API
+        });
+        // Use yearClose as reference for simple % calculation
+        const ref=data.yearClose;const cur=data.price;
+        if(ref&&cur){
+          // Simple: show flat line at benchmark yearly perf scaled to our period
+          const benchYearPct=(cur-ref)/ref*100;
+          const periodDays=perfDates.length;
+          const benchPeriodPct=benchYearPct*periodDays/365;
+          const benchLine=perfDates.map((_,i)=>benchPeriodPct*(i+1)/periodDays);
+          chart.data.datasets[bi+1].data=benchLine;
+          chart.update();
+        }
+      });
+    });
+  }
+
+  // ── DEPOT HISTORY CHART ──
+  // Merge stored history + today's value
+  const todayVal=parseFloat(document.getElementById('depotValue').value)||null;
+  const today=todayStr();
+  let histData=[...depotHistory];
+  if(todayVal&&!histData.find(d=>d.date===today))histData.push({date:today,value:todayVal});
+  histData.sort((a,b)=>a.date.localeCompare(b.date));
+  // Filter by period
+  const depotFiltered=filterDepotByPeriod(histData);
+  if(chartDepotInst)chartDepotInst.destroy();
+  chartDepotInst=new Chart(document.getElementById('chartDepot').getContext('2d'),{type:'line',
+    data:{labels:depotFiltered.map(d=>new Date(d.date+'T00:00:00').toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit'})),
+      datasets:[{label:'Depotwert',data:depotFiltered.map(d=>d.value),borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.06)',tension:.3,fill:true,pointRadius:2}]},
+    options:chartOpts(v=>'€'+fmt(v,0))});
+
+  // ── TABLE ──
   const tbody=document.getElementById('tradesBody');
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--muted2)">Keine Trades im gewählten Zeitraum</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:24px;color:var(--muted2)">Keine Trades im gewählten Zeitraum</td></tr>';return;}
   tbody.innerHTML=filtered.map(t=>{
     const pnlCol=t.pnlEur>0?'var(--green)':t.pnlEur<0?'var(--red)':'var(--muted)';
     const sign=t.pnlEur>0?'+':'';
@@ -1230,8 +1314,18 @@ function renderJournal(){
     const annualized=holdDays>0?(t.pnlPct/holdDays*365):null;
     const annStr=annualized!==null?`<span style="font-family:var(--mono);font-weight:700;color:${pnlCol}">${sign}${fmt(annualized,1)}%</span>`:'—';
     const fmtD=dt=>dt?dt.toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
-    return`<tr>
-      <td><button class="ibtn" onclick="openEditTrade('${t.id}')" style="width:22px;height:22px;font-size:10px">✎</button></td>
+    return`<tr id="tr-${t.id}" draggable="true"
+      ondragstart="onTradeDragStart(event,'${t.id}')"
+      ondragover="onTradeDragOver(event,'${t.id}')"
+      ondragleave="onTradeDragLeave(event,'${t.id}')"
+      ondrop="onTradeDrop(event,'${t.id}')">
+      <td>
+        <div style="display:flex;gap:3px;align-items:center">
+          <span style="cursor:grab;color:var(--muted2);font-size:12px;padding:0 2px">⠿</span>
+          <button class="ibtn" onclick="openEditTrade('${t.id}')" style="width:20px;height:20px;font-size:10px">✎</button>
+          <button class="ibtn del" onclick="deleteTrade('${t.id}')" style="width:20px;height:20px;font-size:10px">✕</button>
+        </div>
+      </td>
       <td><span class="trade-sym" style="color:var(--blue)">${t.symbol}</span></td>
       <td><div style="font-family:var(--mono);font-size:11px;font-weight:600">${fmtU(t.buy_price)}</div><div style="font-size:10px;color:var(--muted2)">${fmtD(buyDt)}</div></td>
       <td><div style="font-family:var(--mono);font-size:11px;font-weight:600">${fmtU(t.sell_price)}</div><div style="font-size:10px;color:var(--muted2)">${fmtD(sellDt)}</div></td>
@@ -1250,8 +1344,68 @@ function renderJournal(){
 }
 
 // ═══════════════════════════
-// CSV EXPORT
+// DELETE TRADE
 // ═══════════════════════════
+async function deleteTrade(id){
+  if(!confirm('Trade wirklich löschen?'))return;
+  try{
+    await dbDeleteTrade(id);
+    trades=trades.filter(t=>String(t.id)!==String(id));
+    setSyncStatus('ok','Trade gelöscht');
+    renderJournal();
+  }catch(e){setSyncStatus('err',e.message);}
+}
+
+// ═══════════════════════════
+// INLINE NOTE EDIT
+// ═══════════════════════════
+function startNoteEdit(id){
+  const p=positions.find(x=>x.id===id);if(!p)return;
+  const el=document.getElementById('note-display-'+id);
+  const inp=document.getElementById('note-input-'+id);
+  if(!el||!inp)return;
+  el.style.display='none';
+  inp.style.display='block';
+  inp.value=p.note||'';
+  inp.focus();
+}
+function saveNoteEdit(id){
+  const p=positions.find(x=>x.id===id);if(!p)return;
+  const inp=document.getElementById('note-input-'+id);if(!inp)return;
+  p.note=inp.value.trim()||null;
+  const el=document.getElementById('note-display-'+id);
+  if(el){el.textContent=p.note?'💬 '+p.note:'+ Notiz hinzufügen';el.style.display='block';}
+  inp.style.display='none';
+  schedulSync(()=>dbUpsertPosition(p));
+}
+
+// ═══════════════════════════
+// TRADE DRAG & DROP
+// ═══════════════════════════
+let dragTradeId=null;
+function onTradeDragStart(e,id){
+  dragTradeId=id;e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>{const el=document.getElementById('tr-'+id);if(el)el.style.opacity='.4';},0);
+}
+function onTradeDragOver(e,id){
+  if(id===dragTradeId)return;e.preventDefault();
+  const el=document.getElementById('tr-'+id);if(el)el.style.borderTop='2px solid var(--blue)';
+}
+function onTradeDragLeave(e,id){
+  const el=document.getElementById('tr-'+id);if(el)el.style.borderTop='';
+}
+function onTradeDrop(e,targetId){
+  e.preventDefault();
+  const el=document.getElementById('tr-'+targetId);if(el)el.style.borderTop='';
+  if(!dragTradeId||dragTradeId===targetId){dragTradeId=null;return;}
+  const di=trades.findIndex(t=>String(t.id)===String(dragTradeId));
+  const ti=trades.findIndex(t=>String(t.id)===String(targetId));
+  if(di===-1||ti===-1){dragTradeId=null;return;}
+  const[moved]=trades.splice(di,1);trades.splice(ti,0,moved);
+  schedulSync(()=>dbUpdateTradeOrder(trades));
+  dragTradeId=null;
+  renderJournal();
+}
 function exportCSV(){
   const filtered=filterTradesByPeriod(trades);
   if(!filtered.length){alert('Keine Trades im gewählten Zeitraum.');return;}
