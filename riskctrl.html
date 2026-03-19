@@ -379,7 +379,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.4.0</div>
+      <div class="ver-badge"><span class="dot"></span>v2.4.1</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -1323,19 +1323,35 @@ function renderJournal(){
       ]},
     options:chartOpts(v=>v.toFixed(1)+'%',true)});
 
-  // Benchmarks
+  // Benchmarks — tägliche Kurse, auf Basis 100 am Startdatum indexiert
   if(allDates.length>1){
-    const periodStartTs=new Date(earliest+'T00:00:00').getTime()/1000;
     Promise.allSettled([fetchOnePrice('SPY','full'),fetchOnePrice('QQQ','full')]).then(results=>{
       const chart=chartPerfInst;if(!chart)return;
       results.forEach((r,bi)=>{
         if(r.status!=='fulfilled')return;
-        const data=r.value;const curPrice=data.price;if(!curPrice)return;
-        const daysDiff=Math.round((Date.now()/1000-periodStartTs)/86400);
-        let refPrice=daysDiff<=7?data.weekClose:daysDiff<=30?data.monthClose:data.yearClose;
-        if(!refPrice)return;
-        const totalBenchPct=(curPrice-refPrice)/refPrice*100;
-        const benchLine=allDates.map((_,i)=>totalBenchPct*(i+1)/allDates.length);
+        const data=r.value;
+        const daily=data.dailyCloses||{};
+        if(!Object.keys(daily).length)return;
+
+        // Basiswert = letzter bekannter Kurs am oder vor dem Startdatum
+        let basePrice=null;
+        const sortedDates=Object.keys(daily).sort();
+        for(const d of sortedDates){
+          if(d<=earliest)basePrice=daily[d];
+          else break;
+        }
+        // Falls kein Kurs vor earliest: ersten verfügbaren nehmen
+        if(!basePrice&&sortedDates.length)basePrice=daily[sortedDates[0]];
+        if(!basePrice)return;
+
+        // Für jeden Tag im allDates-Array: Kurs / Basispreis * 100 - 100 = % Veränderung
+        let lastClose=null;
+        const benchLine=allDates.map(d=>{
+          if(daily[d])lastClose=daily[d];
+          if(!lastClose)return null;
+          return(lastClose-basePrice)/basePrice*100;
+        });
+
         chart.data.datasets[bi+1].data=benchLine;
         chart.update('none');
       });
