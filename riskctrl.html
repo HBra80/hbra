@@ -469,7 +469,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.5.1</div>
+      <div class="ver-badge"><span class="dot"></span>v2.5.2</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -1887,8 +1887,8 @@ function importDepotFile(input){
         const lines=text.split(/\r?\n/).filter(l=>l.trim());
         rows=lines.map(l=>l.split(/[;,\t]/).map(c=>c.trim().replace(/^"|"$/g,'')));
       }else{
-        // Excel parsing via SheetJS — raw:false damit Daten als Strings kommen
-        const wb=XLSX.read(e.target.result,{type:'array',cellDates:false,raw:false});
+        // Excel parsing via SheetJS — cellDates:true damit Datumszellen als JS Date kommen
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
         const ws=wb.Sheets[wb.SheetNames[0]];
         rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
       }
@@ -1933,22 +1933,23 @@ function importDepotFile(input){
           // YYYY-MM-DD
           if(/^\d{4}-\d{2}-\d{2}$/.test(rawDate)){
             iso=rawDate;
-          // DD.MM.YYYY or DD/MM/YYYY
-          }else if(/^\d{1,2}[.\/]\d{1,2}[.\/]\d{4}$/.test(rawDate)){
-            const parts=rawDate.split(/[.\/]/);
+          // DD.MM.YYYY or DD/MM/YYYY (4-digit year)
+          }else if(/^\d{1,2}[.]\d{1,2}[.]\d{4}$/.test(rawDate)){
+            const parts=rawDate.split('.');
             iso=`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-          // DD.MM.YY or DD/MM/YY (zweistelliges Jahr)
-          }else if(/^\d{1,2}[.\/]\d{1,2}[.\/]\d{2}$/.test(rawDate)){
-            const parts=rawDate.split(/[.\/]/);
+          // DD.MM.YY (zweistelliges Jahr — dein Format!)
+          }else if(/^\d{1,2}[.]\d{1,2}[.]\d{2}$/.test(rawDate)){
+            const parts=rawDate.split('.');
             const yr=parseInt(parts[2])<50?'20'+parts[2].padStart(2,'0'):'19'+parts[2].padStart(2,'0');
             iso=`${yr}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-          // MM/DD/YYYY (US-Format Fallback)
+          // M/D/YYYY oder MM/DD/YYYY (SheetJS US-Format output)
           }else if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(rawDate)){
             const parts=rawDate.split('/');
+            // SheetJS mit cellDates gibt M/D/YYYY aus → Monat/Tag/Jahr
             iso=`${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
-          // Excel serial number (z.B. 45000)
-          }else if(/^\d{5}$/.test(rawDate)){
-            const d=new Date((parseInt(rawDate)-25569)*86400000);
+          // Excel Serial Number (z.B. 45000)
+          }else if(/^\d{4,5}$/.test(rawDate)){
+            const d=new Date(Math.round((parseInt(rawDate)-25569)*86400*1000));
             iso=d.toISOString().split('T')[0];
           }
         }
@@ -1962,7 +1963,13 @@ function importDepotFile(input){
 
       importParsed.sort((a,b)=>a.date.localeCompare(b.date));
 
-      // Show preview
+      // Debug: erste Datenzeile anzeigen wenn nichts gefunden
+      if(!importParsed.length&&rows.length>1){
+        const r=rows[1];
+        const debugInfo=r?`\n\nErkannte Werte in Zeile 2:\nSpalte A: "${r[0]}" (Typ: ${typeof r[0]})\nSpalte B: "${r[1]}" (Typ: ${typeof r[1]})`:'';
+        alert('Keine gültigen Zeilen gefunden. '+skipped+' Zeile(n) übersprungen.'+debugInfo+'\n\nBitte Format prüfen:\nSpalte A = TT.MM.JJJJ, Spalte B = Zahl');
+        return;
+      }
       showImportPreview(skipped);
     }catch(err){
       alert('Fehler beim Einlesen: '+err.message);
