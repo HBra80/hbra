@@ -421,7 +421,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.6.5</div>
+      <div class="ver-badge"><span class="dot"></span>v2.6.6</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -2102,12 +2102,9 @@ function importDepotFile(input){
         const yr=parseInt(iso.split('-')[0]);
         if(yr<2000||yr>2100){skipped++;continue;}
 
-        // Cashflow: Debug zeigt 4 Spalten ["datum","depotwert","57","5000"]
-        // Spalte C (Index 2) enthält unbekannte Werte, Spalte D (Index 3) = echter Cashflow
-        // Bei 3 Spalten: Index 2 = Cashflow, bei 4+ Spalten: letzter Index = Cashflow
+        // Cashflow: immer Index [3] — Index [2] enthält versteckte Excel-Daten
         let cashflow=null;
-        const cfIdx=row.length>=4?row.length-1:2;
-        const cfRaw=row[cfIdx];
+        const cfRaw=row.length>3?row[3]:null;
         if(cfRaw!==undefined&&cfRaw!==null&&cfRaw!==''){
           const cfStr=String(cfRaw).trim();
           if(cfStr){
