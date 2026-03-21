@@ -309,54 +309,6 @@ textarea::placeholder{color:var(--muted2);}
 <body>
 
 <!-- DEPOT IMPORT MODAL -->
-<div id="depotImportModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeDepotImport()">
-  <div class="modal" style="max-width:560px">
-    <div class="modal-header">
-      <div class="modal-title">📥 Depotwerte importieren</div>
-      <button class="modal-close" onclick="closeDepotImport()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div style="background:var(--blue-bg);border:1px solid #b8d0ff;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;line-height:1.8;">
-        <div style="font-weight:700;color:var(--blue);margin-bottom:6px">📋 Erforderliches Format (Excel / CSV)</div>
-        <div style="font-family:var(--mono);font-size:11px;background:#fff;border-radius:6px;padding:8px 12px;border:1px solid var(--border)">
-          <div style="color:var(--muted2)">Datum;Depotwert</div>
-          <div>04.01.2026;15000</div>
-          <div>05.01.2026;15200</div>
-          <div>06.01.2026;14950</div>
-        </div>
-        <div style="margin-top:8px;color:var(--muted);font-size:11px">
-          · Spalte A: Datum im Format <strong>TT.MM.JJJJ</strong><br>
-          · Spalte B: Depotwert als Zahl (kein €, keine Punkte)<br>
-          · Erste Zeile: Überschrift (wird automatisch übersprungen)<br>
-          · In Excel: Datei → Speichern unter → CSV (Trennzeichen-getrennt)
-        </div>
-      </div>
-      <button class="btn btn-ghost" style="width:auto;padding:7px 14px;margin-bottom:14px;margin-top:0" onclick="downloadDepotTemplate()">
-        ⬇ Vorlage-Datei herunterladen
-      </button>
-      <div id="depotImportPreview" style="display:none">
-        <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px" id="depotImportCount"></div>
-        <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:7px">
-          <table style="width:100%;border-collapse:collapse;font-size:11px">
-            <thead>
-              <tr style="background:var(--surface)">
-                <th style="padding:6px 10px;text-align:left;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted2);border-bottom:1px solid var(--border)">Datum</th>
-                <th style="padding:6px 10px;text-align:right;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted2);border-bottom:1px solid var(--border)">Depotwert</th>
-                <th style="padding:6px 10px;text-align:center;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted2);border-bottom:1px solid var(--border)">Status</th>
-              </tr>
-            </thead>
-            <tbody id="depotImportTable"></tbody>
-          </table>
-        </div>
-      </div>
-      <div id="depotImportError" style="display:none;background:var(--red-bg);border:1px solid #f5c2be;border-radius:7px;padding:10px 14px;font-size:12px;color:var(--red);margin-top:10px"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeDepotImport()">Abbrechen</button>
-      <button class="btn btn-primary" id="depotImportConfirmBtn" style="display:none" onclick="confirmDepotImport()">✓ Importieren</button>
-    </div>
-  </div>
-</div>
 <div id="importModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeImportModal()">
   <div class="modal" style="max-width:560px">
     <div class="modal-header">
@@ -469,7 +421,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.5.2</div>
+      <div class="ver-badge"><span class="dot"></span>v2.5.3</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -685,7 +637,15 @@ textarea::placeholder{color:var(--muted2);}
         <canvas id="chartDepot"></canvas>
       </div>
 
-      <!-- TRADES TABLE -->
+      <!-- DEPOT HISTORY TABLE -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <div class="chi chi-purple">📋</div>
+          <span class="card-title">Depotwert-Verlauf</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--muted)" id="depotHistoryCount">—</span>
+        </div>
+        <div id="depotHistoryTable"></div>
+      </div>
       <div class="card">
         <div class="card-header">
           <div class="chi chi-orange">▤</div>
@@ -1348,6 +1308,97 @@ function setPeriod(p){
 
 function filterTradesByPeriod(list){return filterByPeriod(list,'sell_date');}
 
+// ═══════════════════════════
+// DEPOT HISTORY TABLE
+// ═══════════════════════════
+const depotMonthCollapsed={};
+
+function toggleDepotMonth(key){
+  depotMonthCollapsed[key]=!depotMonthCollapsed[key];
+  renderDepotHistoryTable();
+}
+
+function renderDepotHistoryTable(){
+  const container=document.getElementById('depotHistoryTable');
+  if(!container)return;
+  const sorted=[...depotHistory].sort((a,b)=>b.date.localeCompare(a.date)); // neueste zuerst
+  if(!sorted.length){
+    container.innerHTML='<div class="empty" style="padding:20px">Noch keine Depotwerte erfasst</div>';
+    document.getElementById('depotHistoryCount').textContent='0 Einträge';
+    return;
+  }
+  document.getElementById('depotHistoryCount').textContent=sorted.length+' Einträge';
+
+  // Nach Monat gruppieren
+  const months={};
+  sorted.forEach(d=>{
+    const key=d.date.slice(0,7); // YYYY-MM
+    if(!months[key])months[key]=[];
+    months[key].push(d);
+  });
+  const monthKeys=Object.keys(months).sort((a,b)=>b.localeCompare(a));
+
+  let html='';
+  monthKeys.forEach((key,mi)=>{
+    const rows=months[key];
+    const dt=new Date(key+'-01T00:00:00');
+    const label=dt.toLocaleDateString('de-AT',{month:'long',year:'numeric'});
+    // Aktueller Monat standardmäßig aufgeklappt, Rest eingeklappt
+    const isCurrentMonth=key===todayStr().slice(0,7);
+    const collapsed=depotMonthCollapsed[key]!==undefined?depotMonthCollapsed[key]:!isCurrentMonth;
+    const avg=rows.reduce((s,r)=>s+r.value,0)/rows.length;
+    const min=Math.min(...rows.map(r=>r.value));
+    const max=Math.max(...rows.map(r=>r.value));
+
+    html+=`<div style="border-bottom:1px solid var(--border)">
+      <div onclick="toggleDepotMonth('${key}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:var(--surface);user-select:none">
+        <span style="font-size:11px;color:var(--muted2);transition:transform .2s;display:inline-block;${collapsed?'':'transform:rotate(90deg)'}">▶</span>
+        <span style="font-weight:600;font-size:13px">${label}</span>
+        <span style="font-size:10px;color:var(--muted);margin-left:4px">${rows.length} Einträge</span>
+        <span style="margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--muted)">Ø ${fmtE(avg,0)} · Min ${fmtE(min,0)} · Max ${fmtE(max,0)}</span>
+      </div>`;
+
+    if(!collapsed){
+      html+=`<table style="width:100%;border-collapse:collapse;font-size:12px">`;
+      rows.forEach((d,i)=>{
+        const dt2=new Date(d.date+'T00:00:00');
+        const dayLabel=dt2.toLocaleDateString('de-AT',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit'});
+        // Veränderung zum Vortag
+        const prevRow=rows[i+1];
+        let diffHtml='';
+        if(prevRow){
+          const diff=d.value-prevRow.value;
+          const diffPct=diff/prevRow.value*100;
+          const sign=diff>0?'+':'';
+          const col=diff>0?'var(--green)':diff<0?'var(--red)':'var(--muted2)';
+          diffHtml=`<span style="font-size:10px;color:${col};font-family:var(--mono);margin-left:8px">${sign}${fmtE(diff,0)} (${sign}${fmt(diffPct,2)}%)</span>`;
+        }
+        html+=`<tr style="border-top:1px solid var(--border);${i%2===0?'background:var(--white)':'background:var(--surface)'}">
+          <td style="padding:7px 14px;font-family:var(--mono);font-size:11px;color:var(--muted)">${dayLabel}</td>
+          <td style="padding:7px 14px;font-family:var(--mono);font-weight:700;font-size:13px">${fmtE(d.value,2)}</td>
+          <td style="padding:7px 14px">${diffHtml}</td>
+          <td style="padding:7px 8px;text-align:right">
+            <button class="ibtn del" onclick="deleteDepotEntry('${d.date}')" style="width:18px;height:18px;font-size:9px" title="Eintrag löschen">✕</button>
+          </td>
+        </tr>`;
+      });
+      html+=`</table>`;
+    }
+    html+=`</div>`;
+  });
+  container.innerHTML=html;
+}
+
+async function deleteDepotEntry(date){
+  if(!confirm('Depotwert vom '+new Date(date+'T00:00:00').toLocaleDateString('de-AT')+' löschen?'))return;
+  try{
+    await sbFetch('depot_history?date=eq.'+date,{method:'DELETE',headers:{'Prefer':''}});
+    depotHistory=depotHistory.filter(d=>d.date!==date);
+    renderDepotHistoryTable();
+    setSyncStatus('ok','Eintrag gelöscht');
+  }catch(e){setSyncStatus('err',e.message);}
+}
+
 function renderJournal(){
   const filtered=filterTradesByPeriod(trades);
   const fx=getFx();
@@ -1470,6 +1521,9 @@ function renderJournal(){
   chartDepotInst=new Chart(document.getElementById('chartDepot').getContext('2d'),{type:'line',
     data:{labels:depotAllDates.map(fmtLbl),datasets:[{label:'Depotwert',data:depotLine,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.06)',tension:.3,fill:true,pointRadius:0}]},
     options:chartOpts(v=>'€'+fmt(v,0))});
+
+  // Depot-History Tabelle
+  renderDepotHistoryTable();
 
   // ── TABLE ──
   const tbody=document.getElementById('tradesBody');
@@ -2074,147 +2128,6 @@ async function confirmImport(){
 // DEPOT CSV/EXCEL IMPORT
 // ═══════════════════════════
 let depotImportData = []; // parsed rows ready to save
-
-function importDepotFile(input) {
-  const file = input.files[0];
-  if (!file) return;
-  input.value = ''; // reset so same file can be selected again
-  const reader = new FileReader();
-  reader.onload = e => {
-    const text = e.target.result;
-    parseDepotCSV(text);
-    document.getElementById('depotImportModal').style.display = 'flex';
-  };
-  reader.readAsText(file, 'UTF-8');
-}
-
-function parseDepotCSV(text) {
-  depotImportData = [];
-  const errEl = document.getElementById('depotImportError');
-  const prevEl = document.getElementById('depotImportPreview');
-  const confirmBtn = document.getElementById('depotImportConfirmBtn');
-  errEl.style.display = 'none';
-  prevEl.style.display = 'none';
-  confirmBtn.style.display = 'none';
-
-  // Support semicolon and comma separators
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (!lines.length) { showImportError('Datei ist leer.'); return; }
-
-  const rows = [];
-  let skipped = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    // Try semicolon first, then comma
-    const sep = line.includes(';') ? ';' : ',';
-    const parts = line.split(sep).map(p => p.trim().replace(/^["']|["']$/g, ''));
-    if (parts.length < 2) { skipped++; continue; }
-
-    const rawDate = parts[0];
-    const rawVal  = parts[1].replace(/[^\d.,]/g, '').replace(',', '.');
-
-    // Skip header row
-    if (isNaN(parseFloat(rawVal))) { skipped++; continue; }
-
-    // Parse date: DD.MM.YYYY or YYYY-MM-DD
-    let iso = null;
-    if (/^\d{2}\.\d{2}\.\d{4}$/.test(rawDate)) {
-      const [d, m, y] = rawDate.split('.');
-      iso = `${y}-${m}-${d}`;
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
-      iso = rawDate;
-    } else {
-      skipped++; continue;
-    }
-
-    const val = parseFloat(rawVal);
-    if (!(val > 0)) { skipped++; continue; }
-
-    const exists = depotHistory.find(h => h.date === iso);
-    rows.push({ date: iso, value: val, exists: !!exists });
-  }
-
-  if (!rows.length) {
-    showImportError(`Keine gültigen Zeilen gefunden. ${skipped} Zeile(n) übersprungen.\n\nBitte Format prüfen: Spalte A = TT.MM.JJJJ, Spalte B = Zahl`);
-    return;
-  }
-
-  depotImportData = rows;
-
-  // Show preview
-  const tbody = document.getElementById('depotImportTable');
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td style="padding:5px 10px;font-family:var(--mono);font-size:11px">${new Date(r.date+'T00:00:00').toLocaleDateString('de-AT')}</td>
-      <td style="padding:5px 10px;text-align:right;font-family:var(--mono);font-size:11px">€ ${fmt(r.value)}</td>
-      <td style="padding:5px 10px;text-align:center;font-size:10px">
-        ${r.exists
-          ? '<span style="color:var(--yellow);font-weight:600">↺ überschreiben</span>'
-          : '<span style="color:var(--green);font-weight:600">+ neu</span>'}
-      </td>
-    </tr>`).join('');
-
-  const newCount = rows.filter(r => !r.exists).length;
-  const updCount = rows.filter(r =>  r.exists).length;
-  document.getElementById('depotImportCount').innerHTML =
-    `<span style="color:var(--green)">${newCount} neue</span> + <span style="color:var(--yellow)">${updCount} zu aktualisierende</span> Einträge${skipped ? ` · ${skipped} übersprungen` : ''}`;
-
-  prevEl.style.display = 'block';
-  confirmBtn.style.display = '';
-}
-
-function showImportError(msg) {
-  const el = document.getElementById('depotImportError');
-  el.textContent = msg;
-  el.style.display = 'block';
-}
-
-function closeDepotImport() {
-  document.getElementById('depotImportModal').style.display = 'none';
-  depotImportData = [];
-}
-
-async function confirmDepotImport() {
-  if (!depotImportData.length) return;
-  const btn = document.getElementById('depotImportConfirmBtn');
-  btn.disabled = true;
-  btn.textContent = '⟳ Importiere…';
-  try {
-    // Save in batches to avoid overwhelming Supabase
-    for (const row of depotImportData) {
-      await dbUpsertDepotHistory(row.date, row.value);
-      const idx = depotHistory.findIndex(h => h.date === row.date);
-      if (idx !== -1) depotHistory[idx].value = row.value;
-      else depotHistory.push({ date: row.date, value: row.value });
-    }
-    depotHistory.sort((a, b) => a.date.localeCompare(b.date));
-    setSyncStatus('ok', `${depotImportData.length} Depotwerte importiert`);
-    closeDepotImport();
-    // Update header depot value to latest import
-    const latest = depotImportData.sort((a,b) => b.date.localeCompare(a.date))[0];
-    if (latest) {
-      document.getElementById('depotValue').value = latest.value;
-      onGlobalChange();
-    }
-  } catch(e) {
-    setSyncStatus('err', e.message);
-    btn.disabled = false;
-    btn.textContent = '✓ Importieren';
-  }
-}
-
-function downloadDepotTemplate() {
-  const csv = '\uFEFFDatum;Depotwert\n04.01.2026;15000\n05.01.2026;15200\n06.01.2026;14950\n';
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'depot_vorlage.csv';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-}
 
 
 function setLoading(msg){document.getElementById('loMsg').textContent=msg;}
