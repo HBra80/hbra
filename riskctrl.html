@@ -421,7 +421,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.6.1</div>
+      <div class="ver-badge"><span class="dot"></span>v2.6.2</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -2034,6 +2034,8 @@ function importDepotFile(input){
       // Parse rows — skip header, parse date + value
       importParsed=[];
       let skipped=0;
+      // DEBUG: erste Datenzeile in Konsole ausgeben
+      if(rows.length>1)console.log('Row 1 raw:',JSON.stringify(rows[1]));
       for(let i=1;i<rows.length;i++){
         const row=rows[i];
         if(!row||row[0]===undefined||row[0]===null||row[0]==='')continue;
