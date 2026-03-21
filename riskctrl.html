@@ -421,7 +421,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.6.2</div>
+      <div class="ver-badge"><span class="dot"></span>v2.6.3</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -2099,16 +2099,21 @@ function importDepotFile(input){
         const yr=parseInt(iso.split('-')[0]);
         if(yr<2000||yr>2100){skipped++;continue;}
 
-        // Spalte C: Cashflow (optional)
+        // Cashflow: letzter nicht-leerer Wert nach Spalte B
+        // Unterstützt 3-spaltig (A,B,C) und 4-spaltig (A,B,C-formel,D)
         let cashflow=null;
-        if(row[2]!==undefined&&row[2]!==null&&row[2]!==''){
-          const cfStr=String(row[2]).trim();
-          let cleanCf;
-          if(cfStr.includes(',')&&cfStr.includes('.')){cleanCf=cfStr.replace(/\./g,'').replace(',','.');}
-          else if(cfStr.includes(',')){cleanCf=cfStr.replace(',','.');}
-          else{cleanCf=cfStr.replace(/[^\d.-]/g,'');}
-          const cfVal=parseFloat(cleanCf);
-          if(!isNaN(cfVal)&&cfVal!==0)cashflow=cfVal;
+        const lastColIdx=row.length-1;
+        if(lastColIdx>=2){
+          const cfStr=String(row[lastColIdx]||'').trim();
+          if(cfStr!==''){
+            let cleanCf;
+            if(cfStr.includes(',')&&cfStr.includes('.')){cleanCf=cfStr.replace(/\./g,'').replace(',','.');}
+            else if(cfStr.includes(',')){cleanCf=cfStr.replace(',','.');}
+            else{cleanCf=cfStr.replace(/[^\d.-]/g,'');}
+            const cfVal=parseFloat(cleanCf);
+            // Nur speichern wenn ungleich 0 und ungleich dem Depotwert (Schutz vor Formel-Spalten)
+            if(!isNaN(cfVal)&&cfVal!==0&&Math.abs(cfVal-val)>0.01)cashflow=cfVal;
+          }
         }
 
         importParsed.push({date:iso,value:val,cashflow});
