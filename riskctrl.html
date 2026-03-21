@@ -469,7 +469,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.5.0</div>
+      <div class="ver-badge"><span class="dot"></span>v2.5.1</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -1887,10 +1887,10 @@ function importDepotFile(input){
         const lines=text.split(/\r?\n/).filter(l=>l.trim());
         rows=lines.map(l=>l.split(/[;,\t]/).map(c=>c.trim().replace(/^"|"$/g,'')));
       }else{
-        // Excel parsing via SheetJS
-        const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+        // Excel parsing via SheetJS — raw:false damit Daten als Strings kommen
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:false,raw:false});
         const ws=wb.Sheets[wb.SheetNames[0]];
-        rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,dateNF:'DD.MM.YYYY'});
+        rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
       }
 
       // Parse rows — skip header, parse date + value
@@ -1898,26 +1898,65 @@ function importDepotFile(input){
       let skipped=0;
       for(let i=1;i<rows.length;i++){
         const row=rows[i];
-        if(!row||!row[0]||!row[1])continue;
-        const rawDate=String(row[0]).trim();
-        const rawVal=String(row[1]).trim().replace(/[^\d,.-]/g,'').replace(',','.');
-        const val=parseFloat(rawVal);
+        if(!row||row[0]===undefined||row[0]===null||row[0]==='')continue;
 
-        // Parse date: TT.MM.JJJJ or JJJJ-MM-TT or TT/MM/JJJJ
+        // Parse value — accept commas and dots as decimal separator
+        // Strip everything except digits, comma, dot, minus
+        const rawVal=String(row[1]||'').trim()
+          .replace(/\./g,'')   // remove thousands dots (German: 5.000,57 → 500057 without this... wait)
+          .replace(',','.');   // comma decimal → dot
+        // Actually: German format "5.049,19" → remove dots first, then replace comma
+        // Re-do: replace last comma with dot, remove all other non-numeric
+        const valStr=String(row[1]||'').trim();
+        // Handle German number format: 5.049,19 or 5049,19 or 5049.19
+        let cleanVal;
+        if(valStr.includes(',')&&valStr.includes('.')){
+          // e.g. 5.049,19 → thousands dot, decimal comma
+          cleanVal=valStr.replace(/\./g,'').replace(',','.');
+        }else if(valStr.includes(',')){
+          // e.g. 5049,19 → decimal comma only
+          cleanVal=valStr.replace(',','.');
+        }else{
+          cleanVal=valStr.replace(/[^\d.-]/g,'');
+        }
+        const val=parseFloat(cleanVal);
+
+        // Parse date — handle multiple formats including SheetJS output
         let iso=null;
-        if(/^\d{4}-\d{2}-\d{2}$/.test(rawDate)){
-          iso=rawDate;
-        }else if(/^\d{1,2}[.\/]\d{1,2}[.\/]\d{4}$/.test(rawDate)){
-          const parts=rawDate.split(/[.\/]/);
-          iso=`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-        }else if(/^\d{1,2}[.\/]\d{1,2}[.\/]\d{2}$/.test(rawDate)){
-          // TT.MM.JJ → 2-digit year
-          const parts=rawDate.split(/[.\/]/);
-          const yr=parseInt(parts[2])<50?'20'+parts[2]:'19'+parts[2];
-          iso=`${yr}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        let rawDate=row[0];
+
+        // If SheetJS returned a JS Date object
+        if(rawDate instanceof Date){
+          iso=rawDate.toISOString().split('T')[0];
+        } else {
+          rawDate=String(rawDate).trim();
+          // YYYY-MM-DD
+          if(/^\d{4}-\d{2}-\d{2}$/.test(rawDate)){
+            iso=rawDate;
+          // DD.MM.YYYY or DD/MM/YYYY
+          }else if(/^\d{1,2}[.\/]\d{1,2}[.\/]\d{4}$/.test(rawDate)){
+            const parts=rawDate.split(/[.\/]/);
+            iso=`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+          // DD.MM.YY or DD/MM/YY (zweistelliges Jahr)
+          }else if(/^\d{1,2}[.\/]\d{1,2}[.\/]\d{2}$/.test(rawDate)){
+            const parts=rawDate.split(/[.\/]/);
+            const yr=parseInt(parts[2])<50?'20'+parts[2].padStart(2,'0'):'19'+parts[2].padStart(2,'0');
+            iso=`${yr}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+          // MM/DD/YYYY (US-Format Fallback)
+          }else if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(rawDate)){
+            const parts=rawDate.split('/');
+            iso=`${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+          // Excel serial number (z.B. 45000)
+          }else if(/^\d{5}$/.test(rawDate)){
+            const d=new Date((parseInt(rawDate)-25569)*86400000);
+            iso=d.toISOString().split('T')[0];
+          }
         }
 
         if(!iso||isNaN(val)||val<=0){skipped++;continue;}
+        // Validate date is reasonable (between 2000 and 2100)
+        const yr=parseInt(iso.split('-')[0]);
+        if(yr<2000||yr>2100){skipped++;continue;}
         importParsed.push({date:iso,value:val});
       }
 
