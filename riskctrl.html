@@ -421,7 +421,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.5.3</div>
+      <div class="ver-badge"><span class="dot"></span>v2.6.0</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -602,12 +602,14 @@ textarea::placeholder{color:var(--muted2);}
         <div class="jstat"><div class="jstat-label">Gewinn-Rate</div><div class="jstat-val" id="jWinRate" style="color:var(--green)">—</div><div class="jstat-sub" id="jWinCount">—</div></div>
         <div class="jstat"><div class="jstat-label">Profit-Faktor</div><div class="jstat-val" id="jProfitFactor" style="color:var(--blue)">—</div><div class="jstat-sub">Ø Gewinn ÷ Ø Verlust</div></div>
         <div class="jstat"><div class="jstat-label">Trades gesamt</div><div class="jstat-val" id="jTotal" style="color:var(--blue)">—</div><div class="jstat-sub" id="jAvgPnl">Ø P&amp;L</div></div>
+        <div class="jstat"><div class="jstat-label">TWR p.a.</div><div class="jstat-val" id="jTwr" style="color:var(--muted)">—</div><div class="jstat-sub">Depot-Performance</div></div>
       </div>
 
       <!-- PERIOD + DATE RANGE -->
       <div class="date-range-row">
         <button class="period-btn active" onclick="setPeriod('all')">Alle</button>
-        <button class="period-btn" onclick="setPeriod('year')">Jahr</button>
+        <button class="period-btn" onclick="setPeriod('ytd')">YTD</button>
+        <button class="period-btn" onclick="setPeriod('year')">1 Jahr</button>
         <button class="period-btn" onclick="setPeriod('month')">Monat</button>
         <button class="period-btn" onclick="setPeriod('week')">Woche</button>
         <button class="period-btn" onclick="setPeriod('today')">Heute</button>
@@ -758,6 +760,7 @@ async function sbFetch(path,options={}){
 let positions=[];
 let trades=[];
 let depotHistory=[];
+let cashflows=[];
 let editId=null;
 let sellTarget=null;
 let currentPeriod='all';
@@ -776,7 +779,8 @@ function filterByPeriod(list,dateField){
   if(currentPeriod==='today'){from=todayStr();}
   else if(currentPeriod==='week'){const d=new Date(now);d.setDate(d.getDate()-7);from=d.toISOString().split('T')[0];}
   else if(currentPeriod==='month'){const d=new Date(now);d.setMonth(d.getMonth()-1);from=d.toISOString().split('T')[0];}
-  else if(currentPeriod==='year'){from=now.getFullYear()+'-01-01';}
+  else if(currentPeriod==='ytd'){from=now.getFullYear()+'-01-01';}
+  else if(currentPeriod==='year'){const d=new Date(now);d.setFullYear(d.getFullYear()-1);from=d.toISOString().split('T')[0];}
   return list.filter(t=>t[dateField]>=from);
 }
 
@@ -815,11 +819,12 @@ function pctBadge(cur,ref,label){
 // DB
 // ═══════════════════════════
 async function dbLoadAll(){
-  const[posRows,setRows,tradeRows,histRows]=await Promise.all([
+  const[posRows,setRows,tradeRows,histRows,cfRows]=await Promise.all([
     sbFetch('positions?order=sort_order.asc,id.asc',{method:'GET'}),
     sbFetch('settings',{method:'GET'}),
     sbFetch('trades?order=sort_order.asc,sell_date.desc',{method:'GET'}),
-    sbFetch('depot_history?order=date.asc',{method:'GET'})
+    sbFetch('depot_history?order=date.asc',{method:'GET'}),
+    sbFetch('cashflows?order=date.asc',{method:'GET'})
   ]);
   positions=posRows.map(r=>({id:r.id,name:r.name,price:r.price,qty:r.qty,lev:r.lev,curPrice:r.cur_price??null,buyDate:r.buy_date??null,note:r.note??'',stopLoss:r.stop_loss??null,takeProfit:r.take_profit??null}));
   const fx=getFx();
@@ -828,11 +833,20 @@ async function dbLoadAll(){
     return{...r,pnlEur:sellEur-buyEur,pnlPct:(sellEur-buyEur)/buyEur*100};
   });
   depotHistory=histRows.map(r=>({date:r.date,value:r.depot_value}));
+  cashflows=cfRows.map(r=>({date:r.date,amount:r.amount,note:r.note||null}));
   const depot=setRows.find(r=>r.key==='depot');
   const fxS=setRows.find(r=>r.key==='fx');
   if(depot)document.getElementById('depotValue').value=depot.value;
   if(fxS)document.getElementById('fxRate').value=fxS.value;
   document.getElementById('depotDate').value=yesterdayStr();
+}
+
+async function dbUpsertCashflow(date,amount,note){
+  await sbFetch('cashflows',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},
+    body:JSON.stringify({id:new Date(date).getTime(),date,amount,note:note||null})});
+}
+async function dbDeleteCashflow(date){
+  await sbFetch('cashflows?date=eq.'+date,{method:'DELETE',headers:{'Prefer':''}});
 }
 async function dbUpsertPosition(p){
   await sbFetch('positions',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},
@@ -1300,7 +1314,7 @@ function recalculate(){
 function setPeriod(p){
   currentPeriod=p;
   document.querySelectorAll('.period-btn').forEach(b=>{
-    const map={'all':'Alle','year':'Jahr','month':'Monat','week':'Woche','today':'Heute','custom':'Von-Bis'};
+    const map={'all':'Alle','ytd':'YTD','year':'1 Jahr','month':'Monat','week':'Woche','today':'Heute','custom':'Von-Bis'};
     b.classList.toggle('active',b.textContent.trim()===map[p]);
   });
   renderJournal();
@@ -1359,24 +1373,40 @@ function renderDepotHistoryTable(){
       </div>`;
 
     if(!collapsed){
-      html+=`<table style="width:100%;border-collapse:collapse;font-size:12px">`;
+      html+=`<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface)">
+          <th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);text-transform:uppercase">Datum</th>
+          <th style="padding:6px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);text-transform:uppercase">Depotwert</th>
+          <th style="padding:6px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);text-transform:uppercase">Veränderung</th>
+          <th style="padding:6px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);text-transform:uppercase">Cashflow</th>
+          <th></th>
+        </tr></thead>`;
       rows.forEach((d,i)=>{
         const dt2=new Date(d.date+'T00:00:00');
         const dayLabel=dt2.toLocaleDateString('de-AT',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit'});
-        // Veränderung zum Vortag
         const prevRow=rows[i+1];
-        let diffHtml='';
+        let diffHtml='—';
         if(prevRow){
           const diff=d.value-prevRow.value;
           const diffPct=diff/prevRow.value*100;
           const sign=diff>0?'+':'';
           const col=diff>0?'var(--green)':diff<0?'var(--red)':'var(--muted2)';
-          diffHtml=`<span style="font-size:10px;color:${col};font-family:var(--mono);margin-left:8px">${sign}${fmtE(diff,0)} (${sign}${fmt(diffPct,2)}%)</span>`;
+          diffHtml=`<span style="color:${col};font-family:var(--mono)">${sign}${fmtE(diff,0)} (${sign}${fmt(diffPct,2)}%)</span>`;
+        }
+        // Cashflow für diesen Tag
+        const cf=cashflows.find(c=>c.date===d.date);
+        let cfHtml='';
+        if(cf){
+          const col=cf.amount>0?'var(--green)':'var(--red)';
+          const sign=cf.amount>0?'+':'';
+          cfHtml=`<span style="color:${col};font-family:var(--mono);font-weight:700">${sign}${fmtE(cf.amount,2)}</span>`;
+          if(cf.note)cfHtml+=`<div style="font-size:9px;color:var(--muted);font-style:italic">${cf.note}</div>`;
         }
         html+=`<tr style="border-top:1px solid var(--border);${i%2===0?'background:var(--white)':'background:var(--surface)'}">
-          <td style="padding:7px 14px;font-family:var(--mono);font-size:11px;color:var(--muted)">${dayLabel}</td>
-          <td style="padding:7px 14px;font-family:var(--mono);font-weight:700;font-size:13px">${fmtE(d.value,2)}</td>
-          <td style="padding:7px 14px">${diffHtml}</td>
+          <td style="padding:7px 10px;font-family:var(--mono);font-size:11px;color:var(--muted)">${dayLabel}</td>
+          <td style="padding:7px 10px;font-family:var(--mono);font-weight:700;font-size:13px;text-align:right">${fmtE(d.value,2)}</td>
+          <td style="padding:7px 10px;font-size:11px;text-align:right">${diffHtml}</td>
+          <td style="padding:7px 10px;font-size:11px;text-align:right">${cfHtml}</td>
           <td style="padding:7px 8px;text-align:right">
             <button class="ibtn del" onclick="deleteDepotEntry('${d.date}')" style="width:18px;height:18px;font-size:9px" title="Eintrag löschen">✕</button>
           </td>
@@ -1461,19 +1491,57 @@ function renderJournal(){
     data:{labels:allDates.map(fmtLbl),datasets:[{label:'P&L (€)',data:cumPnl,borderColor:'#1a6aff',backgroundColor:'rgba(26,106,255,.08)',tension:.3,fill:true,pointRadius:0}]},
     options:chartOpts(v=>'€'+fmt(v,0))});
 
-  // Performance chart — ab earliest
-  const perfByDate={};
-  filtered.forEach(t=>{const dep=t.depot_value_at_buy||0;const pct=dep>0?t.pnlEur/dep*100:0;perfByDate[t.sell_date]=(perfByDate[t.sell_date]||0)+pct;});
-  let cumPerf=0;
-  const cumPerfData=allDates.map(d=>{if(perfByDate[d])cumPerf+=perfByDate[d];return cumPerf;});
+  // ── PERFORMANCE CHART — Time-Weighted Return (TWR) ──
+  // Depot-Wert täglich in % ab Startdatum, bereinigt um Cashflows
+  // Basis: erster Depotwert im Zeitraum = 0%, täglich relativ dazu
+  const cfMap={};cashflows.forEach(c=>{cfMap[c.date]=(cfMap[c.date]||0)+c.amount;});
+  const depotMap2={};depotFiltered.forEach(d=>{depotMap2[d.date]=d.value;});
+
+  // TWR: für jeden Teilabschnitt zwischen Cashflows Rendite berechnen
+  let twrData=[];
+  if(depotFiltered.length>=2){
+    // Basis = erster Wert
+    const baseVal=depotFiltered[0].value;
+    let twr=1.0; // kumulativer TWR-Faktor
+    let prevVal=baseVal;
+    let prevDate=depotFiltered[0].date;
+
+    // Alle Datumspunkte mit bekanntem Depotwert
+    const knownDates=depotFiltered.map(d=>d.date);
+    const twrByDate={[prevDate]:0};
+
+    for(let i=1;i<depotFiltered.length;i++){
+      const d=depotFiltered[i];
+      const cf=cfMap[d.date]||0;
+      // Rendite dieser Periode = (Endwert - CF) / Vorwert - 1
+      const periodReturn=(d.value-cf)/prevVal;
+      if(periodReturn>0&&isFinite(periodReturn)){
+        twr*=periodReturn;
+      }
+      twrByDate[d.date]=(twr-1)*100;
+      prevVal=d.value;
+      prevDate=d.date;
+    }
+
+    // Alle Tage interpolieren
+    let lastTwr=null;
+    twrData=allDates.map(d=>{
+      if(twrByDate[d]!==undefined)lastTwr=twrByDate[d];
+      return lastTwr;
+    });
+  }else if(depotFiltered.length===1){
+    twrData=allDates.map(()=>0);
+  }else{
+    twrData=allDates.map(()=>null);
+  }
 
   if(chartPerfInst)chartPerfInst.destroy();
   chartPerfInst=new Chart(document.getElementById('chartPerf').getContext('2d'),{type:'line',
     data:{labels:allDates.map(fmtLbl),
       datasets:[
-        {label:'Mein Depot',data:cumPerfData,borderColor:'#f56a00',backgroundColor:'rgba(245,106,0,.06)',tension:.3,fill:true,pointRadius:0,borderWidth:2},
-        {label:'S&P 500',data:Array(allDates.length).fill(null),borderColor:'#1a6aff',borderDash:[5,3],tension:.3,fill:false,pointRadius:0,borderWidth:1.5},
-        {label:'NASDAQ',data:Array(allDates.length).fill(null),borderColor:'#00a854',borderDash:[5,3],tension:.3,fill:false,pointRadius:0,borderWidth:1.5}
+        {label:'Mein Depot (TWR)',data:twrData,borderColor:'#f56a00',backgroundColor:'rgba(245,106,0,.06)',tension:.3,fill:true,pointRadius:0,borderWidth:2},
+        {label:'S&P 500',data:Array(allDates.length).fill(null),borderColor:'#4d8dff',borderDash:[5,3],tension:.3,fill:false,pointRadius:0,borderWidth:1.5},
+        {label:'NASDAQ',data:Array(allDates.length).fill(null),borderColor:'#2ecc7a',borderDash:[5,3],tension:.3,fill:false,pointRadius:0,borderWidth:1.5}
       ]},
     options:chartOpts(v=>v.toFixed(1)+'%',true)});
 
@@ -1521,6 +1589,20 @@ function renderJournal(){
   chartDepotInst=new Chart(document.getElementById('chartDepot').getContext('2d'),{type:'line',
     data:{labels:depotAllDates.map(fmtLbl),datasets:[{label:'Depotwert',data:depotLine,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.06)',tension:.3,fill:true,pointRadius:0}]},
     options:chartOpts(v=>'€'+fmt(v,0))});
+
+  // TWR p.a. KPI
+  const twrEl=document.getElementById('jTwr');
+  if(twrEl&&depotFiltered.length>=2){
+    const finalTwr=twrData.filter(v=>v!==null);
+    if(finalTwr.length){
+      const totalTwr=finalTwr[finalTwr.length-1];
+      const days=allDates.length||1;
+      const twrPa=totalTwr/days*365;
+      const sign=twrPa>0?'+':'';
+      twrEl.textContent=sign+fmt(twrPa,2)+'%';
+      twrEl.style.color=twrPa>0?'var(--green)':twrPa<0?'var(--red)':'var(--muted)';
+    }
+  }else if(twrEl){twrEl.textContent='—';twrEl.style.color='var(--muted)';}
 
   // Depot-History Tabelle
   renderDepotHistoryTable();
@@ -2012,18 +2094,23 @@ function importDepotFile(input){
         // Validate date is reasonable (between 2000 and 2100)
         const yr=parseInt(iso.split('-')[0]);
         if(yr<2000||yr>2100){skipped++;continue;}
-        importParsed.push({date:iso,value:val});
+
+        // Spalte C: Cashflow (optional)
+        let cashflow=null;
+        if(row[2]!==undefined&&row[2]!==null&&row[2]!==''){
+          const cfStr=String(row[2]).trim();
+          let cleanCf;
+          if(cfStr.includes(',')&&cfStr.includes('.')){cleanCf=cfStr.replace(/\./g,'').replace(',','.');}
+          else if(cfStr.includes(',')){cleanCf=cfStr.replace(',','.');}
+          else{cleanCf=cfStr.replace(/[^\d.-]/g,'');}
+          const cfVal=parseFloat(cleanCf);
+          if(!isNaN(cfVal)&&cfVal!==0)cashflow=cfVal;
+        }
+
+        importParsed.push({date:iso,value:val,cashflow});
       }
 
       importParsed.sort((a,b)=>a.date.localeCompare(b.date));
-
-      // Debug: erste Datenzeile anzeigen wenn nichts gefunden
-      if(!importParsed.length&&rows.length>1){
-        const r=rows[1];
-        const debugInfo=r?`\n\nErkannte Werte in Zeile 2:\nSpalte A: "${r[0]}" (Typ: ${typeof r[0]})\nSpalte B: "${r[1]}" (Typ: ${typeof r[1]})`:'';
-        alert('Keine gültigen Zeilen gefunden. '+skipped+' Zeile(n) übersprungen.'+debugInfo+'\n\nBitte Format prüfen:\nSpalte A = TT.MM.JJJJ, Spalte B = Zahl');
-        return;
-      }
       showImportPreview(skipped);
     }catch(err){
       alert('Fehler beim Einlesen: '+err.message);
@@ -2036,38 +2123,51 @@ function importDepotFile(input){
 
 function showImportPreview(skipped){
   if(!importParsed.length){
-    alert('Keine gültigen Zeilen gefunden. Bitte Format prüfen:\nSpalte A: Datum (TT.MM.JJJJ)\nSpalte B: Depotwert (Zahl)');
+    document.getElementById('importPreview').innerHTML=`
+      <div style="background:var(--red-bg);border:1px solid #f5c2be;border-radius:8px;padding:14px;color:var(--red);font-size:12px;line-height:1.6">
+        <strong>Keine gültigen Zeilen gefunden.</strong> ${skipped} Zeile(n) übersprungen.<br>
+        Bitte prüfe das Format:<br>
+        · Spalte A: Datum (z.B. <code>06.03.25</code> oder <code>06.03.2025</code>)<br>
+        · Spalte B: Depotwert (z.B. <code>5000,57</code>)<br>
+        · Spalte C: Cashflow optional (z.B. <code>1000</code> oder <code>-500</code>)
+      </div>`;
+    document.getElementById('importModal').style.display='flex';
     return;
   }
 
   const existing=importParsed.filter(r=>depotHistory.find(d=>d.date===r.date));
   const newRows=importParsed.filter(r=>!depotHistory.find(d=>d.date===r.date));
+  const cfRows=importParsed.filter(r=>r.cashflow!=null);
 
-  document.getElementById('importConfirmLabel').textContent=
-    `${importParsed.length} Einträge importieren`;
+  document.getElementById('importConfirmLabel').textContent=`${importParsed.length} Einträge importieren`;
 
   document.getElementById('importPreview').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px">
       <div style="background:var(--green-bg);border:1px solid #a3e6c0;border-radius:7px;padding:10px;text-align:center">
-        <div style="font-size:20px;font-weight:700;color:var(--green)">${newRows.length}</div>
-        <div style="font-size:10px;color:var(--muted)">Neue Einträge</div>
+        <div style="font-size:18px;font-weight:700;color:var(--green)">${newRows.length}</div>
+        <div style="font-size:10px;color:var(--muted)">Neu</div>
       </div>
       <div style="background:var(--yellow-bg);border:1px solid #ffe58f;border-radius:7px;padding:10px;text-align:center">
-        <div style="font-size:20px;font-weight:700;color:var(--yellow)">${existing.length}</div>
-        <div style="font-size:10px;color:var(--muted)">Werden überschrieben</div>
+        <div style="font-size:18px;font-weight:700;color:var(--yellow)">${existing.length}</div>
+        <div style="font-size:10px;color:var(--muted)">Update</div>
+      </div>
+      <div style="background:var(--blue-bg);border:1px solid #b8d0ff;border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--blue)">${cfRows.length}</div>
+        <div style="font-size:10px;color:var(--muted)">Cashflows</div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px;text-align:center">
-        <div style="font-size:20px;font-weight:700;color:var(--muted)">${skipped}</div>
+        <div style="font-size:18px;font-weight:700;color:var(--muted)">${skipped}</div>
         <div style="font-size:10px;color:var(--muted)">Übersprungen</div>
       </div>
     </div>
-    <div style="font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Vorschau (erste 10 Zeilen)</div>
-    <div style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:7px">
+    <div style="font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Vorschau (erste 10)</div>
+    <div style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:7px">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="background:var(--surface)">
-          <th style="padding:7px 10px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted2)">Datum</th>
-          <th style="padding:7px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted2)">Depotwert</th>
-          <th style="padding:7px 10px;text-align:center;font-size:9px;color:var(--muted2)">Status</th>
+          <th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted2)">Datum</th>
+          <th style="padding:6px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted2)">Depotwert</th>
+          <th style="padding:6px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted2)">Cashflow</th>
+          <th style="padding:6px 10px;text-align:center;font-size:9px;color:var(--muted2)">Status</th>
         </tr></thead>
         <tbody>
           ${importParsed.slice(0,10).map(r=>{
@@ -2075,13 +2175,15 @@ function showImportPreview(skipped){
             const statusBadge=ex
               ?`<span style="font-size:9px;color:var(--yellow);background:var(--yellow-bg);padding:1px 5px;border-radius:3px">↺ Update</span>`
               :`<span style="font-size:9px;color:var(--green);background:var(--green-bg);padding:1px 5px;border-radius:3px">+ Neu</span>`;
+            const cfStr=r.cashflow!=null?(r.cashflow>0?`<span style="color:var(--green);font-weight:600">+${fmtE(r.cashflow,0)}</span>`:`<span style="color:var(--red);font-weight:600">${fmtE(r.cashflow,0)}</span>`):'—';
             return`<tr style="border-top:1px solid var(--border)">
               <td style="padding:6px 10px;font-family:var(--mono)">${new Date(r.date+'T00:00:00').toLocaleDateString('de-AT')}</td>
               <td style="padding:6px 10px;font-family:var(--mono);text-align:right;font-weight:600">${fmtE(r.value,0)}</td>
+              <td style="padding:6px 10px;font-family:var(--mono);text-align:right">${cfStr}</td>
               <td style="padding:6px 10px;text-align:center">${statusBadge}</td>
             </tr>`;
           }).join('')}
-          ${importParsed.length>10?`<tr><td colspan="3" style="padding:8px 10px;text-align:center;color:var(--muted2);font-size:11px">… und ${importParsed.length-10} weitere</td></tr>`:''}
+          ${importParsed.length>10?`<tr><td colspan="4" style="padding:8px 10px;text-align:center;color:var(--muted2);font-size:11px">… und ${importParsed.length-10} weitere</td></tr>`:''}
         </tbody>
       </table>
     </div>`;
@@ -2097,30 +2199,37 @@ function closeImportModal(){
 async function confirmImport(){
   if(!importParsed.length)return;
   const btn=document.getElementById('importConfirmBtn');
-  btn.disabled=true;
-  btn.textContent='Importiere…';
+  btn.disabled=true;btn.textContent='Importiere…';
   try{
-    // Batch upsert in chunks of 50
     const chunk=50;
     for(let i=0;i<importParsed.length;i+=chunk){
       const batch=importParsed.slice(i,i+chunk);
       await Promise.all(batch.map(r=>dbUpsertDepotHistory(r.date,r.value)));
-      // Update local state
       batch.forEach(r=>{
         const idx=depotHistory.findIndex(d=>d.date===r.date);
         if(idx!==-1)depotHistory[idx].value=r.value;
         else depotHistory.push({date:r.date,value:r.value});
       });
+      // Cashflows speichern wenn vorhanden
+      const cfBatch=batch.filter(r=>r.cashflow!=null);
+      if(cfBatch.length){
+        await Promise.all(cfBatch.map(r=>dbUpsertCashflow(r.date,r.cashflow,null)));
+        cfBatch.forEach(r=>{
+          const idx=cashflows.findIndex(c=>c.date===r.date);
+          if(idx!==-1)cashflows[idx].amount=r.cashflow;
+          else cashflows.push({date:r.date,amount:r.cashflow,note:null});
+        });
+      }
     }
     depotHistory.sort((a,b)=>a.date.localeCompare(b.date));
+    cashflows.sort((a,b)=>a.date.localeCompare(b.date));
+    const cfCount=importParsed.filter(r=>r.cashflow!=null).length;
     closeImportModal();
-    setSyncStatus('ok',`${importParsed.length} Depotwerte importiert`);
-    // Re-render journal if open
+    setSyncStatus('ok',`${importParsed.length} Depotwerte${cfCount?` + ${cfCount} Cashflows`:''} importiert`);
     if(document.getElementById('tab-journal').classList.contains('active'))renderJournal();
   }catch(err){
     setSyncStatus('err',err.message);
-    btn.disabled=false;
-    btn.textContent='✓ Importieren';
+    btn.disabled=false;btn.textContent='✓ Importieren';
   }
 }
 
