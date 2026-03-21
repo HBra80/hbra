@@ -421,7 +421,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.6.0</div>
+      <div class="ver-badge"><span class="dot"></span>v2.6.1</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -842,8 +842,10 @@ async function dbLoadAll(){
 }
 
 async function dbUpsertCashflow(date,amount,note){
+  // ID aus Datum ableiten: YYYYMMDD als Integer — eindeutig pro Tag
+  const id=parseInt(date.replace(/-/g,''));
   await sbFetch('cashflows',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},
-    body:JSON.stringify({id:new Date(date).getTime(),date,amount,note:note||null})});
+    body:JSON.stringify({id,date,amount,note:note||null})});
 }
 async function dbDeleteCashflow(date){
   await sbFetch('cashflows?date=eq.'+date,{method:'DELETE',headers:{'Prefer':''}});
