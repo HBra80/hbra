@@ -421,7 +421,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.6.6</div>
+      <div class="ver-badge"><span class="dot"></span>v2.7.0</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -602,7 +602,7 @@ textarea::placeholder{color:var(--muted2);}
         <div class="jstat"><div class="jstat-label">Gewinn-Rate</div><div class="jstat-val" id="jWinRate" style="color:var(--green)">—</div><div class="jstat-sub" id="jWinCount">—</div></div>
         <div class="jstat"><div class="jstat-label">Profit-Faktor</div><div class="jstat-val" id="jProfitFactor" style="color:var(--blue)">—</div><div class="jstat-sub">Ø Gewinn ÷ Ø Verlust</div></div>
         <div class="jstat"><div class="jstat-label">Trades gesamt</div><div class="jstat-val" id="jTotal" style="color:var(--blue)">—</div><div class="jstat-sub" id="jAvgPnl">Ø P&amp;L</div></div>
-        <div class="jstat"><div class="jstat-label">TWR p.a.</div><div class="jstat-val" id="jTwr" style="color:var(--muted)">—</div><div class="jstat-sub">Depot-Performance</div></div>
+        <div class="jstat"><div class="jstat-label">Mod. Dietz p.a.</div><div class="jstat-val" id="jTwr" style="color:var(--muted)">—</div><div class="jstat-sub">Depot-Performance</div></div>
       </div>
 
       <!-- PERIOD + DATE RANGE -->
@@ -1496,46 +1496,31 @@ function renderJournal(){
     data:{labels:allDates.map(fmtLbl),datasets:[{label:'P&L (€)',data:cumPnl,borderColor:'#1a6aff',backgroundColor:'rgba(26,106,255,.08)',tension:.3,fill:true,pointRadius:0}]},
     options:chartOpts(v=>'€'+fmt(v,0))});
 
-  // ── PERFORMANCE CHART — Time-Weighted Return (TWR) ──
-  // Depot-Wert täglich in % ab Startdatum, bereinigt um Cashflows
-  // Basis: erster Depotwert im Zeitraum = 0%, täglich relativ dazu
+  // ── PERFORMANCE CHART — TWR (Time-Weighted Return) ──
+  // Korrekte Methode: Für jeden Tag mit bekanntem Depotwert
+  // R_i = V_end / (V_start + CF_i)  wobei CF am selben Tag wie neuer Wert gebucht
   const cfMap={};cashflows.forEach(c=>{cfMap[c.date]=(cfMap[c.date]||0)+c.amount;});
-  const depotMap2={};depotFiltered.forEach(d=>{depotMap2[d.date]=d.value;});
 
-  // TWR: für jeden Teilabschnitt zwischen Cashflows Rendite berechnen
   let twrData=[];
   if(depotFiltered.length>=2){
-    // Basis = erster Wert
-    const baseVal=depotFiltered[0].value;
-    let twr=1.0; // kumulativer TWR-Faktor
-    let prevVal=baseVal;
-    let prevDate=depotFiltered[0].date;
-
-    // Alle Datumspunkte mit bekanntem Depotwert
-    const knownDates=depotFiltered.map(d=>d.date);
-    const twrByDate={[prevDate]:0};
-
+    // Berechne kumulativen TWR für jeden bekannten Depotwert-Tag
+    const twrByDate={};
+    let cumTwr=1.0;
+    twrByDate[depotFiltered[0].date]=0; // Starttag = 0%
     for(let i=1;i<depotFiltered.length;i++){
-      const d=depotFiltered[i];
-      const cf=cfMap[d.date]||0;
-      // Rendite dieser Periode = (Endwert - CF) / Vorwert - 1
-      const periodReturn=(d.value-cf)/prevVal;
-      if(periodReturn>0&&isFinite(periodReturn)){
-        twr*=periodReturn;
-      }
-      twrByDate[d.date]=(twr-1)*100;
-      prevVal=d.value;
-      prevDate=d.date;
+      const vStart=depotFiltered[i-1].value;
+      const vEnd=depotFiltered[i].value;
+      const cf=cfMap[depotFiltered[i].date]||0;
+      const basis=vStart+cf;
+      if(basis>0)cumTwr*=(vEnd/basis);
+      twrByDate[depotFiltered[i].date]=(cumTwr-1)*100;
     }
-
-    // Alle Tage interpolieren
+    // Alle Tage interpolieren (letzten bekannten TWR fortschreiben)
     let lastTwr=null;
     twrData=allDates.map(d=>{
       if(twrByDate[d]!==undefined)lastTwr=twrByDate[d];
       return lastTwr;
     });
-  }else if(depotFiltered.length===1){
-    twrData=allDates.map(()=>0);
   }else{
     twrData=allDates.map(()=>null);
   }
@@ -1595,18 +1580,25 @@ function renderJournal(){
     data:{labels:depotAllDates.map(fmtLbl),datasets:[{label:'Depotwert',data:depotLine,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.06)',tension:.3,fill:true,pointRadius:0}]},
     options:chartOpts(v=>'€'+fmt(v,0))});
 
-  // TWR p.a. KPI
+  // TWR p.a. KPI — identische Methode wie Chart
   const twrEl=document.getElementById('jTwr');
   if(twrEl&&depotFiltered.length>=2){
-    const finalTwr=twrData.filter(v=>v!==null);
-    if(finalTwr.length){
-      const totalTwr=finalTwr[finalTwr.length-1];
-      const days=allDates.length||1;
-      const twrPa=totalTwr/days*365;
-      const sign=twrPa>0?'+':'';
-      twrEl.textContent=sign+fmt(twrPa,2)+'%';
-      twrEl.style.color=twrPa>0?'var(--green)':twrPa<0?'var(--red)':'var(--muted)';
+    let cumTwr2=1.0;
+    for(let i=1;i<depotFiltered.length;i++){
+      const vStart=depotFiltered[i-1].value;
+      const vEnd=depotFiltered[i].value;
+      const cf=cfMap[depotFiltered[i].date]||0;
+      const basis=vStart+cf;
+      if(basis>0)cumTwr2*=(vEnd/basis);
     }
+    const totalDays2=Math.max(1,(new Date(depotFiltered[depotFiltered.length-1].date)-new Date(depotFiltered[0].date))/86400000);
+    const years2=totalDays2/365.25;
+    const twrTotal=(cumTwr2-1)*100;
+    const twrPa=years2>0?((cumTwr2**(1/years2))-1)*100:twrTotal;
+    const sign=twrPa>0?'+':'';
+    twrEl.textContent=sign+fmt(twrPa,2)+'% p.a.';
+    twrEl.style.color=twrPa>0?'var(--green)':twrPa<0?'var(--red)':'var(--muted)';
+    twrEl.title=`TWR gesamt: ${twrTotal>0?'+':''}${fmt(twrTotal,2)}% über ${totalDays2} Tage`;
   }else if(twrEl){twrEl.textContent='—';twrEl.style.color='var(--muted)';}
 
   // Depot-History Tabelle
