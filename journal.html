@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RiskCtrl — Journal v1.7</title>
+<title>RiskCtrl — Journal v1.8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -186,7 +186,7 @@ tr:hover td{background:var(--bg3);}
 <header class="header">
   <div class="hdr-l">
     <div class="logo">RISKCTRL</div>
-    <div class="vbadge">JOURNAL v1.7</div>
+    <div class="vbadge">JOURNAL v1.8</div>
   </div>
   <div class="hdr-r">
     <button class="btn btn-sm" onclick="exportCSV()">⬇ CSV</button>
@@ -467,7 +467,7 @@ function cfTriPlugin(canvasId,labels,values,cfsForDisplay){
       Object.entries(cfByDate).forEach(([date,amt])=>{
         const idx=labels.indexOf(date); if(idx<0)return;
         const pv=values[idx]; if(pv==null)return;
-        const px=x.getPixelForIndex(idx),py=y.getPixelForValue(pv);
+        const px=x.getPixelForValue(labels[idx]),py=y.getPixelForValue(pv);
         const s=7,isP=amt>0;
         c.save();c.beginPath();
         isP?(c.moveTo(px,py-s*2),c.lineTo(px-s,py),c.lineTo(px+s,py))
@@ -566,7 +566,7 @@ function buildC2(dep,cfs,canvasId){
       Object.entries(cfByDate).forEach(([date,amt])=>{
         const idx=labels.indexOf(date);if(idx<0)return;
         const pv=dpct[idx];if(pv==null)return;
-        const px=x.getPixelForIndex(idx),py=y.getPixelForValue(pv);
+        const px=x.getPixelForValue(labels[idx]),py=y.getPixelForValue(pv);
         const s=6,isP=amt>0;
         c.save();c.beginPath();
         isP?(c.moveTo(px,py-s*2),c.lineTo(px-s,py),c.lineTo(px+s,py))
