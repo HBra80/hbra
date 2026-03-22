@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RiskCtrl — Journal v1.1</title>
+<title>RiskCtrl — Journal v1.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -637,6 +637,70 @@
   .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* FULLSCREEN CHART */
+  .chart-fullscreen-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    backdrop-filter: blur(6px);
+  }
+  .chart-fullscreen-overlay.open { display: flex; }
+
+  .chart-fullscreen-inner {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 28px;
+    width: 100%;
+    max-width: 1200px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-fullscreen-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .chart-fullscreen-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 400px;
+  }
+
+  .expand-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 3px 8px;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+  .expand-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .close-fs-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 10px;
+    transition: all 0.15s;
+  }
+  .close-fs-btn:hover { color: var(--red); border-color: var(--red); }
 </style>
 </head>
 <body>
@@ -652,7 +716,7 @@
 <header class="header">
   <div class="header-left">
     <div class="logo">RISKCTRL</div>
-    <div class="version-badge">JOURNAL v1.1</div>
+    <div class="version-badge">JOURNAL v1.2</div>
   </div>
   <div class="header-right">
     <button class="btn" onclick="exportCSV()">⬇ CSV Export</button>
@@ -694,8 +758,11 @@
     <div class="chart-card">
       <div class="chart-header">
         <div class="chart-title">DEPOTWERT</div>
-        <div class="chart-legend">
-          <div class="legend-item"><div class="legend-dot" style="background:var(--chart-depot)"></div>Depot €</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--chart-depot)"></div>Depot €</div>
+          </div>
+          <button class="expand-btn" onclick="openFullscreen('chart1')" title="Vollbild">⤢</button>
         </div>
       </div>
       <div class="chart-wrap"><canvas id="chart1"></canvas></div>
@@ -703,10 +770,13 @@
     <div class="chart-card">
       <div class="chart-header">
         <div class="chart-title">PERFORMANCE</div>
-        <div class="chart-legend">
-          <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Depot</div>
-          <div class="legend-item"><div class="legend-dash" style="border-color:var(--chart-spy)"></div>SPY</div>
-          <div class="legend-item"><div class="legend-dash" style="border-color:var(--chart-qqq)"></div>QQQ</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Depot</div>
+            <div class="legend-item"><div class="legend-dash" style="border-color:var(--chart-spy)"></div>SPY</div>
+            <div class="legend-item"><div class="legend-dash" style="border-color:var(--chart-qqq)"></div>QQQ</div>
+          </div>
+          <button class="expand-btn" onclick="openFullscreen('chart2')" title="Vollbild">⤢</button>
         </div>
       </div>
       <div class="chart-wrap"><canvas id="chart2"></canvas></div>
@@ -727,6 +797,22 @@
   </div>
 
 </main>
+
+<!-- FULLSCREEN CHART OVERLAY -->
+<div class="chart-fullscreen-overlay" id="chartFullscreen" onclick="closeFullscreen(event)">
+  <div class="chart-fullscreen-inner" onclick="event.stopPropagation()">
+    <div class="chart-fullscreen-header">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="chart-title" id="fsTitle" style="font-family:var(--font-display);font-size:22px;letter-spacing:1.5px"></div>
+        <div class="chart-legend" id="fsLegend"></div>
+      </div>
+      <button class="close-fs-btn" onclick="closeFullscreen()">✕</button>
+    </div>
+    <div class="chart-fullscreen-wrap">
+      <canvas id="chartFs"></canvas>
+    </div>
+  </div>
+</div>
 
 <!-- IMPORT MODAL -->
 <div class="modal-overlay" id="importModal">
@@ -921,8 +1007,11 @@ function renderKPIs(depot, cfs) {
   const startDate = depot[0].date;
   const endDate = depot[depot.length-1].date;
 
-  const netCF = cfs.reduce((s,c) => s+c.amount, 0);
-  const invested = startVal + netCF;
+  // Netto investiert = immer global: erster Depotwert ever + alle CFs ever
+  const globalStartVal = allDepot.length ? allDepot[0].depot_value : startVal;
+  const globalNetCF = allCF.reduce((s,c) => s+c.amount, 0);
+  const invested = globalStartVal + globalNetCF;
+
   const pnl = endVal - invested;
   const r = modifiedDietz(startVal, endVal, cfs, startDate, endDate);
   const rpa = annualize(r, startDate, endDate);
@@ -1474,21 +1563,32 @@ async function doImport() {
       if (error) throw error;
     }
 
-    // Handle cashflows: delete then insert one by one to avoid id issues
+    // Handle cashflows via raw REST (avoids client null-id bug)
     const cfRows = importRows.filter(r => r.cf !== null);
     if (cfRows.length) {
       const dates = cfRows.map(r => r.date);
-      // Delete existing CFs for these dates first
+      // Delete existing first
       const { error: delErr } = await sb.from('cashflows').delete().in('date', dates);
       if (delErr) throw delErr;
-      // Insert one by one (avoids batch null-id constraint issues)
-      for (const r of cfRows) {
-        const { error: insErr } = await sb.from('cashflows').insert({
+
+      // Insert via raw fetch — lets Postgres handle id generation
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/cashflows`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(cfRows.map(r => ({
           date: r.date,
           amount: r.cf,
           note: 'Import'
-        });
-        if (insErr) throw insErr;
+        })))
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText);
       }
     }
 
@@ -1551,6 +1651,133 @@ function showStatus(msg, type = '') {
   clearTimeout(statusTimer);
   statusTimer = setTimeout(() => bar.className = 'status-bar', 3000);
 }
+
+// ── FULLSCREEN CHART ──────────────────────────────────────────────────────────
+let fsChartInstance = null;
+
+function openFullscreen(chartId) {
+  const overlay = document.getElementById('chartFullscreen');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const isChart1 = chartId === 'chart1';
+  document.getElementById('fsTitle').textContent = isChart1 ? 'DEPOTWERT' : 'PERFORMANCE';
+  document.getElementById('fsLegend').innerHTML = isChart1
+    ? `<div class="legend-item"><div class="legend-dot" style="background:var(--chart-depot)"></div>Depot €</div>`
+    : `<div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Depot</div>
+       <div class="legend-item"><div class="legend-dash" style="border-color:var(--chart-spy)"></div>SPY</div>
+       <div class="legend-item"><div class="legend-dash" style="border-color:var(--chart-qqq)"></div>QQQ</div>`;
+
+  requestAnimationFrame(() => {
+    if (fsChartInstance) { fsChartInstance.destroy(); fsChartInstance = null; }
+    const depot = getFilteredDepot();
+    const cfs = getFilteredCF(depot);
+    const canvas = document.getElementById('chartFs');
+    const ctx = canvas.getContext('2d');
+
+    if (isChart1) {
+      if (!depot.length) return;
+      const labels = depot.map(d => d.date);
+      const values = depot.map(d => d.depot_value);
+      const cfPoints = cfs.map(cf => {
+        const idx = labels.indexOf(cf.date);
+        return { idx, amount: cf.amount, value: idx >= 0 ? values[idx] : null };
+      }).filter(p => p.idx >= 0);
+      const gradient = ctx.createLinearGradient(0, 0, 0, 500);
+      gradient.addColorStop(0, 'rgba(168,85,247,0.3)');
+      gradient.addColorStop(1, 'rgba(168,85,247,0)');
+      const cfPlugin = {
+        id: 'cfTrianglesFs',
+        afterDatasetsDraw(chart) {
+          const {ctx, scales:{x,y}} = chart;
+          for (const p of cfPoints) {
+            const px = x.getPixelForIndex(p.idx), py = y.getPixelForValue(p.value);
+            const isPos = p.amount > 0;
+            ctx.save(); ctx.beginPath();
+            const s = 8;
+            if (isPos) { ctx.moveTo(px, py-s*2); ctx.lineTo(px-s, py); ctx.lineTo(px+s, py); }
+            else { ctx.moveTo(px, py+s*2); ctx.lineTo(px-s, py); ctx.lineTo(px+s, py); }
+            ctx.closePath(); ctx.fillStyle = isPos ? '#22c55e' : '#ef4444'; ctx.fill(); ctx.restore();
+          }
+        }
+      };
+      fsChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [{ data: values, borderColor: 'rgba(168,85,247,0.9)', backgroundColor: gradient, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: 0.3, fill: true }] },
+        plugins: [cfPlugin],
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(26,26,36,0.95)', borderColor: 'rgba(42,42,58,1)', borderWidth: 1, titleFont: { family: 'JetBrains Mono', size: 12 }, bodyFont: { family: 'JetBrains Mono', size: 13 }, padding: 12, callbacks: { title: items => formatDate(items[0].label), label: item => ' Depot: ' + formatEur(item.raw), afterLabel: item => { const cf = cfPoints.find(p => p.idx === item.dataIndex); return cf ? ' CF: ' + (cf.amount > 0 ? '+' : '') + formatEur(cf.amount) : null; } } } },
+          scales: { x: { ticks: { color: '#5a5a72', font: { family: 'JetBrains Mono', size: 11 }, maxTicksLimit: 16, maxRotation: 0 }, grid: { color: 'rgba(42,42,58,0.5)' }, border: { color: 'rgba(42,42,58,0.5)' } }, y: { ticks: { color: '#5a5a72', font: { family: 'JetBrains Mono', size: 11 }, callback: v => '€' + v.toLocaleString('de') }, grid: { color: 'rgba(42,42,58,0.3)' }, border: { color: 'rgba(42,42,58,0.5)' } } }
+        }
+      });
+    } else {
+      // Chart 2 fullscreen
+      if (!depot.length) return;
+      const perfData = dailyPerformance(depot, cfs);
+      const labels = perfData.map(d => d.date);
+      const depotPct = perfData.map(d => d.pct);
+      const startDate = labels[0];
+      function alignBenchmark(closes) {
+        if (!closes || !Object.keys(closes).length) return [];
+        const sortedDates = Object.keys(closes).sort();
+        let basePrice = null;
+        for (const d of sortedDates) { if (d <= startDate) basePrice = closes[d]; }
+        if (!basePrice) return [];
+        return labels.map(label => {
+          let price = null;
+          for (const d of sortedDates) { if (d <= label) price = closes[d]; }
+          return price ? (price / basePrice - 1) * 100 : null;
+        });
+      }
+      const spyPct = alignBenchmark(benchmarkData.spy);
+      const qqqPct = alignBenchmark(benchmarkData.qqq);
+      const cfPlugin = {
+        id: 'cfTrianglesFs2',
+        afterDatasetsDraw(chart) {
+          const {ctx, scales:{x,y}} = chart;
+          for (const cf of cfs) {
+            const idx = labels.indexOf(cf.date);
+            if (idx < 0) continue;
+            const px = x.getPixelForIndex(idx), py = y.getPixelForValue(depotPct[idx]);
+            if (py == null) continue;
+            const isPos = cf.amount > 0;
+            ctx.save(); ctx.beginPath();
+            const s = 7;
+            if (isPos) { ctx.moveTo(px, py-s*2); ctx.lineTo(px-s, py); ctx.lineTo(px+s, py); }
+            else { ctx.moveTo(px, py+s*2); ctx.lineTo(px-s, py); ctx.lineTo(px+s, py); }
+            ctx.closePath(); ctx.fillStyle = isPos ? '#22c55e' : '#ef4444'; ctx.fill(); ctx.restore();
+          }
+        }
+      };
+      const datasets = [{ label: 'Depot', data: depotPct, borderColor: 'rgba(249,115,22,0.9)', backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5, tension: 0.3 }];
+      if (spyPct.length && spyPct.some(v => v !== null)) datasets.push({ label: 'SPY', data: spyPct, borderColor: 'rgba(59,130,246,0.7)', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, pointHoverRadius: 4, tension: 0.3 });
+      if (qqqPct.length && qqqPct.some(v => v !== null)) datasets.push({ label: 'QQQ', data: qqqPct, borderColor: 'rgba(34,197,94,0.7)', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, pointHoverRadius: 4, tension: 0.3 });
+      fsChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        plugins: [cfPlugin],
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(26,26,36,0.95)', borderColor: 'rgba(42,42,58,1)', borderWidth: 1, titleFont: { family: 'JetBrains Mono', size: 12 }, bodyFont: { family: 'JetBrains Mono', size: 13 }, padding: 12, callbacks: { title: items => formatDate(items[0].label), label: item => { const v = item.raw; if (v == null) return null; return ` ${item.dataset.label}: ${v >= 0 ? '+' : ''}${v.toFixed(2)}%`; } } } },
+          scales: { x: { ticks: { color: '#5a5a72', font: { family: 'JetBrains Mono', size: 11 }, maxTicksLimit: 16, maxRotation: 0 }, grid: { color: 'rgba(42,42,58,0.5)' }, border: { color: 'rgba(42,42,58,0.5)' } }, y: { ticks: { color: '#5a5a72', font: { family: 'JetBrains Mono', size: 11 }, callback: v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%' }, grid: { color: 'rgba(42,42,58,0.3)' }, border: { color: 'rgba(42,42,58,0.5)' } } }
+        }
+      });
+    }
+  });
+}
+
+function closeFullscreen(e) {
+  if (e && e.target !== document.getElementById('chartFullscreen')) return;
+  document.getElementById('chartFullscreen').classList.remove('open');
+  document.body.style.overflow = '';
+  if (fsChartInstance) { fsChartInstance.destroy(); fsChartInstance = null; }
+}
+
+// Esc key closes fullscreen
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFullscreen(); });
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 init();
