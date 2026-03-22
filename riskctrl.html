@@ -421,7 +421,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.7.0</div>
+      <div class="ver-badge"><span class="dot"></span>v2.7.1</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -1496,46 +1496,98 @@ function renderJournal(){
     data:{labels:allDates.map(fmtLbl),datasets:[{label:'P&L (€)',data:cumPnl,borderColor:'#1a6aff',backgroundColor:'rgba(26,106,255,.08)',tension:.3,fill:true,pointRadius:0}]},
     options:chartOpts(v=>'€'+fmt(v,0))});
 
-  // ── PERFORMANCE CHART — TWR (Time-Weighted Return) ──
-  // Korrekte Methode: Für jeden Tag mit bekanntem Depotwert
-  // R_i = V_end / (V_start + CF_i)  wobei CF am selben Tag wie neuer Wert gebucht
+  // ── PERFORMANCE CHART — Modified Dietz täglich ──
   const cfMap={};cashflows.forEach(c=>{cfMap[c.date]=(cfMap[c.date]||0)+c.amount;});
 
-  let twrData=[];
+  // Täglicher Modified Dietz: Für jeden Tag t berechne MD vom Start bis t
+  let mdData=[];
   if(depotFiltered.length>=2){
-    // Berechne kumulativen TWR für jeden bekannten Depotwert-Tag
-    const twrByDate={};
-    let cumTwr=1.0;
-    twrByDate[depotFiltered[0].date]=0; // Starttag = 0%
-    for(let i=1;i<depotFiltered.length;i++){
-      const vStart=depotFiltered[i-1].value;
-      const vEnd=depotFiltered[i].value;
-      const cf=cfMap[depotFiltered[i].date]||0;
-      const basis=vStart+cf;
-      if(basis>0)cumTwr*=(vEnd/basis);
-      twrByDate[depotFiltered[i].date]=(cumTwr-1)*100;
-    }
-    // Alle Tage interpolieren (letzten bekannten TWR fortschreiben)
-    let lastTwr=null;
-    twrData=allDates.map(d=>{
-      if(twrByDate[d]!==undefined)lastTwr=twrByDate[d];
-      return lastTwr;
+    const startVal=depotFiltered[0].value;
+    const startDate=depotFiltered[0].date;
+    const startMs=new Date(startDate+'T00:00:00').getTime();
+    const totalMs=new Date(allDates[allDates.length-1]+'T00:00:00').getTime()-startMs||1;
+
+    // Lookup: letzter Depotwert pro Tag
+    const dMap={};depotFiltered.forEach(d=>{dMap[d.date]=d.value;});
+
+    mdData=allDates.map(d=>{
+      // Letzter bekannter Depotwert an oder vor diesem Tag
+      let endVal=null;
+      for(let k=depotFiltered.length-1;k>=0;k--){
+        if(depotFiltered[k].date<=d){endVal=depotFiltered[k].value;break;}
+      }
+      if(endVal===null)return null;
+
+      // Cashflows zwischen startDate und d (exkl. Ersteinzahlung = startDate)
+      let netCf=0,wCf=0;
+      const dMs=new Date(d+'T00:00:00').getTime();
+      const periodMs=dMs-startMs||1;
+      cashflows.forEach(c=>{
+        if(c.date>startDate&&c.date<=d){
+          const cMs=new Date(c.date+'T00:00:00').getTime();
+          const elapsed=cMs-startMs;
+          const w=(periodMs-elapsed)/periodMs;
+          netCf+=c.amount;
+          wCf+=c.amount*Math.max(0,w);
+        }
+      });
+      const denom=startVal+wCf;
+      if(denom<=0)return null;
+      return(endVal-startVal-netCf)/denom*100;
     });
   }else{
-    twrData=allDates.map(()=>null);
+    mdData=allDates.map(()=>null);
   }
+
+  // Cashflow-Punkte für Annotation
+  const cfAnnotations=cashflows.filter(c=>allDates.includes(c.date)).map(c=>({
+    date:c.date,amount:c.amount,
+    idx:allDates.indexOf(c.date),
+    pct:mdData[allDates.indexOf(c.date)]
+  })).filter(c=>c.pct!==null);
+
+  // Cashflow-Datensatz als Scatter-Punkte
+  const cfScatterData=cfAnnotations.map(c=>({x:allDates.map(fmtLbl)[c.idx],y:c.pct,amount:c.amount}));
+
+  const tooltipCb={
+    callbacks:{
+      label:ctx=>{
+        if(ctx.dataset.label==='Cashflows'){
+          const pt=ctx.raw;
+          const sign=pt.amount>0?'+':'';
+          return`${sign}€${fmt(Math.abs(pt.amount),0)} ${pt.amount>0?'Einzahlung':'Entnahme'}`;
+        }
+        return`${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)}%`;
+      }
+    }
+  };
 
   if(chartPerfInst)chartPerfInst.destroy();
   chartPerfInst=new Chart(document.getElementById('chartPerf').getContext('2d'),{type:'line',
     data:{labels:allDates.map(fmtLbl),
       datasets:[
-        {label:'Mein Depot (TWR)',data:twrData,borderColor:'#f56a00',backgroundColor:'rgba(245,106,0,.06)',tension:.3,fill:true,pointRadius:0,borderWidth:2},
+        {label:'Mein Depot (Mod. Dietz)',data:mdData,borderColor:'#f56a00',backgroundColor:'rgba(245,106,0,.06)',tension:.3,fill:true,pointRadius:0,borderWidth:2},
         {label:'S&P 500',data:Array(allDates.length).fill(null),borderColor:'#4d8dff',borderDash:[5,3],tension:.3,fill:false,pointRadius:0,borderWidth:1.5},
-        {label:'NASDAQ',data:Array(allDates.length).fill(null),borderColor:'#2ecc7a',borderDash:[5,3],tension:.3,fill:false,pointRadius:0,borderWidth:1.5}
+        {label:'NASDAQ',data:Array(allDates.length).fill(null),borderColor:'#2ecc7a',borderDash:[5,3],tension:.3,fill:false,pointRadius:0,borderWidth:1.5},
+        {type:'scatter',label:'Cashflows',data:cfScatterData,
+          backgroundColor:cfAnnotations.map(c=>c.amount>0?'rgba(46,204,122,0.9)':'rgba(255,82,82,0.9)'),
+          pointStyle:'triangle',pointRadius:8,pointHoverRadius:10,
+          parsing:{xAxisKey:'x',yAxisKey:'y'},showLine:false}
       ]},
-    options:chartOpts(v=>v.toFixed(1)+'%',true)});
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{size:10},boxWidth:12,padding:8,color:chartColor}},
+        tooltip:{...tooltipCb,mode:'index',intersect:false}
+      },
+      scales:{
+        x:{ticks:{font:{size:10},maxTicksLimit:6,color:chartColor},grid:{color:chartGrid}},
+        y:{ticks:{font:{size:10},callback:v=>v.toFixed(1)+'%',color:chartColor},grid:{color:chartGrid}}
+      }
+    }});
 
-  // Benchmarks — tägliche Kurse, auf Basis 100 am Startdatum indexiert
+  // Benchmarks
   if(allDates.length>1){
     Promise.allSettled([fetchOnePrice('SPY','full'),fetchOnePrice('QQQ','full')]).then(results=>{
       const chart=chartPerfInst;if(!chart)return;
@@ -1544,61 +1596,97 @@ function renderJournal(){
         const data=r.value;
         const daily=data.dailyCloses||{};
         if(!Object.keys(daily).length)return;
-
-        // Basiswert = letzter bekannter Kurs am oder vor dem Startdatum
         let basePrice=null;
         const sortedDates=Object.keys(daily).sort();
-        for(const d of sortedDates){
-          if(d<=earliest)basePrice=daily[d];
-          else break;
-        }
-        // Falls kein Kurs vor earliest: ersten verfügbaren nehmen
+        for(const d of sortedDates){if(d<=earliest)basePrice=daily[d];else break;}
         if(!basePrice&&sortedDates.length)basePrice=daily[sortedDates[0]];
         if(!basePrice)return;
-
-        // Für jeden Tag im allDates-Array: Kurs / Basispreis * 100 - 100 = % Veränderung
         let lastClose=null;
         const benchLine=allDates.map(d=>{
           if(daily[d])lastClose=daily[d];
           if(!lastClose)return null;
           return(lastClose-basePrice)/basePrice*100;
         });
-
         chart.data.datasets[bi+1].data=benchLine;
         chart.update('none');
       });
     });
   }
 
-  // Depot-History chart — ab earliest, heute als letzter Punkt
+  // ── DEPOT CHART mit Cashflow-Markierungen und Mouseover ──
   const depotAllDates=buildDateRange(earliest,today);
-  const depotMap={};depotFiltered.forEach(d=>{depotMap[d.date]=d.value;});
-  let lastDepotVal=null;
-  const depotLine=depotAllDates.map(d=>{if(depotMap[d])lastDepotVal=depotMap[d];return lastDepotVal;});
+  const depotMapD={};depotFiltered.forEach(d=>{depotMapD[d.date]=d.value;});
+  let lastDV=null;
+  const depotLine=depotAllDates.map(d=>{if(depotMapD[d])lastDV=depotMapD[d];return lastDV;});
+
+  // Cashflow-Punkte für Depot-Chart
+  const cfDepotScatter=cashflows.filter(c=>depotAllDates.includes(c.date)).map(c=>{
+    const idx=depotAllDates.indexOf(c.date);
+    return{x:depotAllDates.map(fmtLbl)[idx],y:depotLine[idx],amount:c.amount};
+  }).filter(c=>c.y!==null);
+
   if(chartDepotInst)chartDepotInst.destroy();
   chartDepotInst=new Chart(document.getElementById('chartDepot').getContext('2d'),{type:'line',
-    data:{labels:depotAllDates.map(fmtLbl),datasets:[{label:'Depotwert',data:depotLine,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.06)',tension:.3,fill:true,pointRadius:0}]},
-    options:chartOpts(v=>'€'+fmt(v,0))});
+    data:{labels:depotAllDates.map(fmtLbl),datasets:[
+      {label:'Depotwert',data:depotLine,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.06)',tension:.3,fill:true,pointRadius:0,borderWidth:2},
+      {type:'scatter',label:'Cashflows',data:cfDepotScatter,
+        backgroundColor:cfDepotScatter.map(c=>c.amount>0?'rgba(46,204,122,0.9)':'rgba(255,82,82,0.9)'),
+        pointStyle:'triangle',pointRadius:8,pointHoverRadius:10,
+        parsing:{xAxisKey:'x',yAxisKey:'y'},showLine:false}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          mode:'index',intersect:false,
+          callbacks:{
+            label:ctx=>{
+              if(ctx.dataset.label==='Cashflows'){
+                const pt=ctx.raw;
+                const sign=pt.amount>0?'+':'';
+                return`${sign}€${fmt(Math.abs(pt.amount),0)} ${pt.amount>0?'Einzahlung':'Entnahme'}`;
+              }
+              return`Depot: €${fmt(ctx.parsed.y,2)}`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{ticks:{font:{size:10},maxTicksLimit:6,color:chartColor},grid:{color:chartGrid}},
+        y:{ticks:{font:{size:10},callback:v=>'€'+fmt(v,0),color:chartColor},grid:{color:chartGrid}}
+      }
+    }});
 
-  // TWR p.a. KPI — identische Methode wie Chart
+  // Modified Dietz p.a. KPI — korrekte Methode
   const twrEl=document.getElementById('jTwr');
   if(twrEl&&depotFiltered.length>=2){
-    let cumTwr2=1.0;
-    for(let i=1;i<depotFiltered.length;i++){
-      const vStart=depotFiltered[i-1].value;
-      const vEnd=depotFiltered[i].value;
-      const cf=cfMap[depotFiltered[i].date]||0;
-      const basis=vStart+cf;
-      if(basis>0)cumTwr2*=(vEnd/basis);
-    }
-    const totalDays2=Math.max(1,(new Date(depotFiltered[depotFiltered.length-1].date)-new Date(depotFiltered[0].date))/86400000);
+    const startVal=depotFiltered[0].value;
+    const startDate=depotFiltered[0].date;
+    const endVal=depotFiltered[depotFiltered.length-1].value;
+    const endDate=depotFiltered[depotFiltered.length-1].date;
+    const totalDays2=Math.max(1,(new Date(endDate+'T00:00:00')-new Date(startDate+'T00:00:00'))/86400000);
     const years2=totalDays2/365.25;
-    const twrTotal=(cumTwr2-1)*100;
-    const twrPa=years2>0?((cumTwr2**(1/years2))-1)*100:twrTotal;
-    const sign=twrPa>0?'+':'';
-    twrEl.textContent=sign+fmt(twrPa,2)+'% p.a.';
-    twrEl.style.color=twrPa>0?'var(--green)':twrPa<0?'var(--red)':'var(--muted)';
-    twrEl.title=`TWR gesamt: ${twrTotal>0?'+':''}${fmt(twrTotal,2)}% über ${totalDays2} Tage`;
+    // Alle CFs nach dem Starttag (Ersteinzahlung ist im startVal enthalten)
+    let netCf=0,weightedCf=0;
+    cashflows.forEach(c=>{
+      if(c.date>startDate&&c.date<=endDate){
+        const dElapsed=(new Date(c.date+'T00:00:00')-new Date(startDate+'T00:00:00'))/86400000;
+        const w=(totalDays2-dElapsed)/totalDays2;
+        netCf+=c.amount;
+        weightedCf+=c.amount*w;
+      }
+    });
+    const denom=startVal+weightedCf;
+    if(denom>0){
+      const md=(endVal-startVal-netCf)/denom;
+      const mdPa=years2>0?((1+md)**(1/years2)-1)*100:md*100;
+      const sign=mdPa>0?'+':'';
+      twrEl.textContent=sign+fmt(mdPa,2)+'% p.a.';
+      twrEl.style.color=mdPa>0?'var(--green)':mdPa<0?'var(--red)':'var(--muted)';
+      twrEl.title=`Mod. Dietz gesamt: ${md>0?'+':''}${fmt(md*100,2)}% über ${totalDays2} Tage`;
+    }else{twrEl.textContent='—';twrEl.style.color='var(--muted)';}
   }else if(twrEl){twrEl.textContent='—';twrEl.style.color='var(--muted)';}
 
   // Depot-History Tabelle
