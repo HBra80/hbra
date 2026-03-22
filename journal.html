@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RiskCtrl — Journal v1.3</title>
+<title>RiskCtrl — Journal v1.4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -186,7 +186,7 @@ tr:hover td{background:var(--bg3);}
 <header class="header">
   <div class="hdr-l">
     <div class="logo">RISKCTRL</div>
-    <div class="vbadge">JOURNAL v1.3</div>
+    <div class="vbadge">JOURNAL v1.4</div>
   </div>
   <div class="hdr-r">
     <button class="btn btn-sm" onclick="exportCSV()">⬇ CSV</button>
@@ -428,7 +428,8 @@ function renderKPIs(dep,cfs){
   const sv=dep[0].depot_value, ev=dep[dep.length-1].depot_value;
   const sd=dep[0].date, ed=dep[dep.length-1].date;
   const gs=allDepot.length?allDepot[0].depot_value:sv;
-  const gncf=allCF.reduce((s,c)=>s+c.amount,0);
+  const firstDay=allDepot.length?allDepot[0].date:sd;
+  const gncf=allCF.filter(c=>c.date>firstDay).reduce((s,c)=>s+c.amount,0);
   const invested=gs+gncf;
   const pnl=ev-invested;
   const r=modDietz(sv,ev,cfs,sd,ed);
@@ -477,12 +478,21 @@ function buildC1(dep,cfsForDisplay,canvasId){
   const values=valid.map(d=>d.depot_value);
   // Show all CFs in date range for triangle display (incl. first day)
   const visibleCFs=allCF.filter(c=>c.date>=labels[0]&&c.date<=labels[labels.length-1]);
-  const g=ctx.createLinearGradient(0,0,0,300);
-  g.addColorStop(0,'rgba(168,85,247,.28)');g.addColorStop(1,'rgba(168,85,247,0)');
+  // Gradient plugin: created after canvas has real dimensions
+  const gradPlugin={
+    id:'grad_'+canvasId,
+    beforeDraw(chart){
+      const{ctx:c,chartArea,scales:{y}}=chart;
+      if(!chartArea)return;
+      const g=c.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+      g.addColorStop(0,'rgba(168,85,247,.28)');g.addColorStop(1,'rgba(168,85,247,0)');
+      chart.data.datasets[0].backgroundColor=g;
+    }
+  };
   return{
     type:'line',
-    data:{labels,datasets:[{data:values,borderColor:'rgba(168,85,247,.9)',backgroundColor:g,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.3,fill:true,spanGaps:true}]},
-    plugins:[cfTriPlugin(canvasId,labels,values,visibleCFs)],
+    data:{labels,datasets:[{data:values,borderColor:'rgba(168,85,247,.9)',backgroundColor:'rgba(168,85,247,.1)',borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.3,fill:true,spanGaps:true}]},
+    plugins:[gradPlugin,cfTriPlugin(canvasId,labels,values,visibleCFs)],
     options:{
       responsive:true,maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
@@ -572,15 +582,31 @@ function buildC2(dep,cfs,canvasId){
   };
 }
 
+function renderChart(canvasId,buildFn,dep,cfs,storeRef){
+  if(storeRef.inst){storeRef.inst.destroy();storeRef.inst=null;}
+  if(!dep.length)return;
+  // Ensure canvas has explicit pixel size before Chart.js measures it
+  const canvas=document.getElementById(canvasId);
+  const wrap=canvas.parentElement;
+  const w=wrap.clientWidth||wrap.offsetWidth||800;
+  const h=wrap.clientHeight||wrap.offsetHeight||240;
+  canvas.width=w; canvas.height=h;
+  const cfg=buildFn(dep,cfs,canvasId);
+  if(cfg)storeRef.inst=new Chart(canvas,cfg);
+}
 function renderC1(dep,cfs){
   if(ch1){ch1.destroy();ch1=null;}
   if(!dep.length)return;
-  requestAnimationFrame(()=>{const cfg=buildC1(dep,cfs,'c1');if(cfg)ch1=new Chart(document.getElementById('c1'),cfg);});
+  const ref={inst:null};
+  renderChart('c1',buildC1,dep,cfs,ref);
+  ch1=ref.inst;
 }
 function renderC2(dep,cfs){
   if(ch2){ch2.destroy();ch2=null;}
   if(!dep.length)return;
-  requestAnimationFrame(()=>{const cfg=buildC2(dep,cfs,'c2');if(cfg)ch2=new Chart(document.getElementById('c2'),cfg);});
+  const ref={inst:null};
+  renderChart('c2',buildC2,dep,cfs,ref);
+  ch2=ref.inst;
 }
 
 // ── TABLE ─────────────────────────────────────────────────────────────────────
@@ -692,10 +718,14 @@ function openFS(which){
 function renderFS(){
   if(chFs){chFs.destroy();chFs=null;}
   const dep=getDepot(),cfs=getCF(dep);
+  const canvas=document.getElementById('cfs');
+  const wrap=canvas.parentElement;
+  canvas.width=wrap.clientWidth||wrap.offsetWidth||1200;
+  canvas.height=wrap.clientHeight||wrap.offsetHeight||500;
   const cfg=fsWhich==='1'?buildC1(dep,cfs,'cfs'):buildC2(dep,cfs,'cfs');
   if(cfg){
     if(cfg.options?.scales?.x?.ticks)cfg.options.scales.x.ticks.maxTicksLimit=14;
-    chFs=new Chart(document.getElementById('cfs'),cfg);
+    chFs=new Chart(canvas,cfg);
   }
 }
 function closeFS(e){
