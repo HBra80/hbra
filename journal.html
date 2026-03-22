@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RiskCtrl — Journal v1.4</title>
+<title>RiskCtrl — Journal v1.5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -186,10 +186,11 @@ tr:hover td{background:var(--bg3);}
 <header class="header">
   <div class="hdr-l">
     <div class="logo">RISKCTRL</div>
-    <div class="vbadge">JOURNAL v1.4</div>
+    <div class="vbadge">JOURNAL v1.5</div>
   </div>
   <div class="hdr-r">
     <button class="btn btn-sm" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn btn-sm" onclick="clearAllData()" style="color:var(--red);border-color:var(--red)" title="Alle Depot-Daten löschen">🗑 Reset</button>
     <button class="btn btn-p btn-sm" onclick="openImport()">⬆ Import</button>
   </div>
 </header>
@@ -388,25 +389,29 @@ function annualize(r,sd,ed){
   return Math.pow(1+r,365/d)-1;
 }
 
-// Chain-linked daily performance (correct cumulative return)
-// Each day: r_day = (end - start - CF_today) / start
-// CF on day i assumed received end-of-day (denom = prev close)
+// Chain-linked daily performance
+// CFs on day i are treated as end-of-day flows → denom = prev.depot_value
+// CFs on first day are EXCLUDED (already in startVal)
 function dailyPerf(depot,allPeriodCFs){
   const valid=depot.filter(d=>d.depot_value>0);
   if(valid.length<2)return valid.length===1?[{date:valid[0].date,pct:0}]:[];
+  const firstDate=valid[0].date;
   const cfByDate={};
   for(const c of allPeriodCFs){
+    if(c.date===firstDate)continue; // first day already in startVal
     if(!cfByDate[c.date])cfByDate[c.date]=0;
     cfByDate[c.date]+=c.amount;
   }
   let cum=1.0;
-  const res=[{date:valid[0].date,pct:0}];
+  const res=[{date:firstDate,pct:0}];
   for(let i=1;i<valid.length;i++){
     const prev=valid[i-1],curr=valid[i];
     const cf=cfByDate[curr.date]||0;
     const denom=prev.depot_value;
     if(denom<=0){res.push({date:curr.date,pct:res[res.length-1].pct});continue;}
-    const dr=(curr.depot_value-prev.depot_value-cf)/denom;
+    // Clamp extreme daily moves (data errors) to ±50%
+    let dr=(curr.depot_value-prev.depot_value-cf)/denom;
+    if(dr>0.5)dr=0.5; if(dr<-0.5)dr=-0.5;
     cum*=(1+dr);
     res.push({date:curr.date,pct:(cum-1)*100});
   }
@@ -502,7 +507,7 @@ function buildC1(dep,cfsForDisplay,canvasId){
         callbacks:{
           title:i=>fDate(i[0].label),
           label:i=>' Depot: '+fEur(i.raw),
-          afterLabel:i=>{const cf=visibleCFs.filter(c=>c.date===labels[i.dataIndex]);if(!cf.length)return undefined;const t=cf.reduce((s,c)=>s+c.amount,0);return' CF: '+(t>0?'+':'')+fEur(t);}
+          afterLabel:i=>{const cf=visibleCFs.filter(c=>c.date===labels[i.dataIndex]);if(!cf.length)return '';const t=cf.reduce((s,c)=>s+c.amount,0);return' CF: '+(t>0?'+':'')+fEur(t);}
         }
       }},
       scales:{
@@ -515,7 +520,7 @@ function buildC1(dep,cfsForDisplay,canvasId){
 
 function buildC2(dep,cfs,canvasId){
   const valid=dep.filter(d=>d.depot_value>0);
-  if(valid.length<2)return null;
+  if(valid.length<2){console.warn('[C2] not enough valid points:',valid.length);return null;}
   // Use ALL CFs in period for daily perf calculation
   const periodCFs=allCF.filter(c=>c.date>=valid[0].date&&c.date<=valid[valid.length-1].date);
   const perf=dailyPerf(valid,periodCFs);
@@ -572,7 +577,11 @@ function buildC2(dep,cfs,canvasId){
       plugins:{legend:{display:false},tooltip:{
         backgroundColor:'rgba(18,18,28,.96)',borderColor:'rgba(50,50,70,1)',borderWidth:1,
         titleFont:{family:'JetBrains Mono',size:11},bodyFont:{family:'JetBrains Mono',size:12},padding:10,
-        callbacks:{title:i=>fDate(i[0].label),label:i=>{const v=i.raw;if(v==null)return null;return` ${i.dataset.label}: ${v>=0?'+':''}${v.toFixed(2)}%`;}}
+        callbacks:{
+            title:i=>fDate(i[0].label),
+            label:i=>{const v=i.raw;if(v==null||isNaN(v))return null;return ' '+i.dataset.label+': '+(v>=0?'+':'')+v.toFixed(2)+'%';}
+          },
+          filter:item=>item.formattedValue!==''&&item.raw!=null
       }},
       scales:{
         x:{ticks:{color:'#5a5a72',font:{family:'JetBrains Mono',size:9},maxTicksLimit:8,maxRotation:0},grid:{color:'rgba(42,42,58,.4)'},border:{color:'rgba(42,42,58,.4)'}},
@@ -582,31 +591,40 @@ function buildC2(dep,cfs,canvasId){
   };
 }
 
-function renderChart(canvasId,buildFn,dep,cfs,storeRef){
-  if(storeRef.inst){storeRef.inst.destroy();storeRef.inst=null;}
-  if(!dep.length)return;
-  // Ensure canvas has explicit pixel size before Chart.js measures it
-  const canvas=document.getElementById(canvasId);
-  const wrap=canvas.parentElement;
-  const w=wrap.clientWidth||wrap.offsetWidth||800;
-  const h=wrap.clientHeight||wrap.offsetHeight||240;
-  canvas.width=w; canvas.height=h;
-  const cfg=buildFn(dep,cfs,canvasId);
-  if(cfg)storeRef.inst=new Chart(canvas,cfg);
+// Robust chart renderer: defers to next event-loop tick so DOM is laid out
+function doRenderChart(canvasId, buildFn, dep, cfs, callback) {
+  setTimeout(() => {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+    // Clear explicit size attrs so CSS takes over, then measure
+    canvas.removeAttribute('width');
+    canvas.removeAttribute('height');
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    const wrap = canvas.parentElement;
+    const w = Math.max(wrap.getBoundingClientRect().width, 300);
+    const h = Math.max(wrap.getBoundingClientRect().height, 180);
+    canvas.width = w * (window.devicePixelRatio || 1);
+    canvas.height = h * (window.devicePixelRatio || 1);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    const cfg = buildFn(dep, cfs, canvasId);
+    if (!cfg) return;
+    const inst = new Chart(canvas, cfg);
+    if (callback) callback(inst);
+  }, 50);
 }
-function renderC1(dep,cfs){
-  if(ch1){ch1.destroy();ch1=null;}
-  if(!dep.length)return;
-  const ref={inst:null};
-  renderChart('c1',buildC1,dep,cfs,ref);
-  ch1=ref.inst;
+function renderC1(dep, cfs) {
+  if (ch1) { ch1.destroy(); ch1 = null; }
+  if (!dep.length) return;
+  doRenderChart('c1', buildC1, dep, cfs, inst => { ch1 = inst; });
 }
-function renderC2(dep,cfs){
-  if(ch2){ch2.destroy();ch2=null;}
-  if(!dep.length)return;
-  const ref={inst:null};
-  renderChart('c2',buildC2,dep,cfs,ref);
-  ch2=ref.inst;
+function renderC2(dep, cfs) {
+  if (ch2) { ch2.destroy(); ch2 = null; }
+  if (!dep.length) return;
+  doRenderChart('c2', buildC2, dep, cfs, inst => { ch2 = inst; });
 }
 
 // ── TABLE ─────────────────────────────────────────────────────────────────────
@@ -692,7 +710,8 @@ async function loadBM(){
     const ok=Object.keys(bmData.spy).length>0||Object.keys(bmData.qqq).length>0;
     el.textContent=ok?'✓ SPY & QQQ':'✗ Keine Daten';
     el.className='bmst '+(ok?'ok':'err');
-    const dep=getDepot();renderC2(dep,getCF(dep));
+    const dep=getDepot();
+    renderC2(dep, getCF(dep));
     if(fsWhich==='2'){document.getElementById('fsbmst').textContent=el.textContent;document.getElementById('fsbmst').className=el.className;renderFS();}
   }catch(e){
     console.warn('BM error:',e);
@@ -719,9 +738,12 @@ function renderFS(){
   if(chFs){chFs.destroy();chFs=null;}
   const dep=getDepot(),cfs=getCF(dep);
   const canvas=document.getElementById('cfs');
-  const wrap=canvas.parentElement;
-  canvas.width=wrap.clientWidth||wrap.offsetWidth||1200;
-  canvas.height=wrap.clientHeight||wrap.offsetHeight||500;
+  const existing=Chart.getChart(canvas);
+  if(existing)existing.destroy();
+  canvas.removeAttribute('width');
+  canvas.removeAttribute('height');
+  canvas.style.width='100%';
+  canvas.style.height='100%';
   const cfg=fsWhich==='1'?buildC1(dep,cfs,'cfs'):buildC2(dep,cfs,'cfs');
   if(cfg){
     if(cfg.options?.scales?.x?.ticks)cfg.options.scales.x.ticks.maxTicksLimit=14;
@@ -870,6 +892,24 @@ function showS(msg,type=''){
   const b=document.getElementById('sbar');
   b.textContent=msg;b.className='sbar show'+(type?' '+type:'');
   clearTimeout(stT);stT=setTimeout(()=>b.className='sbar',4500);
+}
+
+// ── RESET ALL DATA ───────────────────────────────────────────────────────────
+async function clearAllData(){
+  if(!confirm('ACHTUNG: Alle Depot- und Cashflow-Daten werden gelöscht!\nFortfahren?'))return;
+  if(!confirm('Wirklich alle Daten löschen? Dies kann nicht rückgängig gemacht werden.'))return;
+  showS('Lösche Daten...','');
+  try{
+    // Delete all depot_history rows
+    const{error:e1}=await sb.from('depot_history').delete().gte('date','2000-01-01');
+    if(e1)throw e1;
+    // Delete all cashflows
+    const{error:e2}=await sb.from('cashflows').delete().gte('date','2000-01-01');
+    if(e2)throw e2;
+    await loadData();
+    renderAll();
+    showS('Alle Daten gelöscht. Bitte importieren.','ok');
+  }catch(err){showS('Fehler: '+(err.message||JSON.stringify(err)),'err');}
 }
 
 init();
