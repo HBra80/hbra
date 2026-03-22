@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RiskCtrl — Journal v1.0</title>
+<title>RiskCtrl — Journal v1.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -322,6 +322,11 @@
   .chart-wrap {
     position: relative;
     height: 260px;
+    width: 100%;
+  }
+
+  .chart-wrap canvas {
+    display: block;
   }
 
   /* TABLE */
@@ -647,7 +652,7 @@
 <header class="header">
   <div class="header-left">
     <div class="logo">RISKCTRL</div>
-    <div class="version-badge">JOURNAL v1.0</div>
+    <div class="version-badge">JOURNAL v1.1</div>
   </div>
   <div class="header-right">
     <button class="btn" onclick="exportCSV()">⬇ CSV Export</button>
@@ -776,9 +781,10 @@ let benchmarkLoaded = false;
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
   await loadData();
+  // Hide overlay FIRST so canvas elements get proper dimensions
+  document.getElementById('loadingOverlay').style.display = 'none';
   renderAll();
   loadBenchmarks();
-  document.getElementById('loadingOverlay').style.display = 'none';
   setupDragDrop();
 }
 
@@ -941,9 +947,11 @@ function renderKPIs(depot, cfs) {
 // ── CHART 1 ───────────────────────────────────────────────────────────────────
 function renderChart1(depot, cfs) {
   if (chart1Instance) { chart1Instance.destroy(); chart1Instance = null; }
-  const ctx = document.getElementById('chart1').getContext('2d');
-
   if (!depot.length) return;
+
+  requestAnimationFrame(() => {
+  const canvas = document.getElementById('chart1');
+  const ctx = canvas.getContext('2d');
 
   const labels = depot.map(d => d.date);
   const values = depot.map(d => d.depot_value);
@@ -1041,6 +1049,7 @@ function renderChart1(depot, cfs) {
       }
     }
   });
+  }); // end requestAnimationFrame
 }
 
 // ── CHART 2 ───────────────────────────────────────────────────────────────────
@@ -1048,6 +1057,7 @@ function renderChart2(depot, cfs) {
   if (chart2Instance) { chart2Instance.destroy(); chart2Instance = null; }
   if (!depot.length) return;
 
+  requestAnimationFrame(() => {
   const ctx = document.getElementById('chart2').getContext('2d');
   const perfData = dailyPerformance(depot, cfs);
   const labels = perfData.map(d => d.date);
@@ -1189,6 +1199,7 @@ function renderChart2(depot, cfs) {
       }
     }
   });
+  }); // end requestAnimationFrame
 }
 
 // ── TABLE ─────────────────────────────────────────────────────────────────────
@@ -1455,22 +1466,30 @@ async function doImport() {
   document.getElementById('importBtn').textContent = 'Importiere...';
 
   try {
-    // Upsert depot_history
+    // Upsert depot_history in chunks of 100
     const depotRows = importRows.map(r => ({ date: r.date, depot_value: r.depot_value }));
-    const { error: e1 } = await sb.from('depot_history').upsert(depotRows, { onConflict: 'date' });
-    if (e1) throw e1;
+    for (let i = 0; i < depotRows.length; i += 100) {
+      const chunk = depotRows.slice(i, i + 100);
+      const { error } = await sb.from('depot_history').upsert(chunk, { onConflict: 'date' });
+      if (error) throw error;
+    }
 
-    // Handle cashflows
+    // Handle cashflows: delete then insert one by one to avoid id issues
     const cfRows = importRows.filter(r => r.cf !== null);
     if (cfRows.length) {
       const dates = cfRows.map(r => r.date);
       // Delete existing CFs for these dates first
-      await sb.from('cashflows').delete().in('date', dates);
-      // Insert new
-      const { error: e2 } = await sb.from('cashflows').insert(
-        cfRows.map(r => ({ date: r.date, amount: r.cf, note: 'Import' }))
-      );
-      if (e2) throw e2;
+      const { error: delErr } = await sb.from('cashflows').delete().in('date', dates);
+      if (delErr) throw delErr;
+      // Insert one by one (avoids batch null-id constraint issues)
+      for (const r of cfRows) {
+        const { error: insErr } = await sb.from('cashflows').insert({
+          date: r.date,
+          amount: r.cf,
+          note: 'Import'
+        });
+        if (insErr) throw insErr;
+      }
     }
 
     closeImport();
