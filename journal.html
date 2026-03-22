@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RiskCtrl — Journal v1.5</title>
+<title>RiskCtrl — Journal v1.6</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -186,7 +186,7 @@ tr:hover td{background:var(--bg3);}
 <header class="header">
   <div class="hdr-l">
     <div class="logo">RISKCTRL</div>
-    <div class="vbadge">JOURNAL v1.5</div>
+    <div class="vbadge">JOURNAL v1.6</div>
   </div>
   <div class="hdr-r">
     <button class="btn btn-sm" onclick="exportCSV()">⬇ CSV</button>
@@ -592,39 +592,26 @@ function buildC2(dep,cfs,canvasId){
 }
 
 // Robust chart renderer: defers to next event-loop tick so DOM is laid out
-function doRenderChart(canvasId, buildFn, dep, cfs, callback) {
-  setTimeout(() => {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const existing = Chart.getChart(canvas);
-    if (existing) existing.destroy();
-    // Clear explicit size attrs so CSS takes over, then measure
-    canvas.removeAttribute('width');
-    canvas.removeAttribute('height');
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    const wrap = canvas.parentElement;
-    const w = Math.max(wrap.getBoundingClientRect().width, 300);
-    const h = Math.max(wrap.getBoundingClientRect().height, 180);
-    canvas.width = w * (window.devicePixelRatio || 1);
-    canvas.height = h * (window.devicePixelRatio || 1);
-    canvas.style.width = w + 'px';
-    canvas.style.height = h + 'px';
-    const cfg = buildFn(dep, cfs, canvasId);
-    if (!cfg) return;
-    const inst = new Chart(canvas, cfg);
-    if (callback) callback(inst);
-  }, 50);
+function makeChart(canvasId, buildFn, dep, cfs) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
+  // Destroy any existing Chart.js instance on this canvas
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+  // Build config
+  const cfg = buildFn(dep, cfs, canvasId);
+  if (!cfg) { console.warn('No chart config for', canvasId); return null; }
+  return new Chart(canvas, cfg);
 }
 function renderC1(dep, cfs) {
-  if (ch1) { ch1.destroy(); ch1 = null; }
+  if (ch1) { try{ch1.destroy();}catch(e){} ch1 = null; }
   if (!dep.length) return;
-  doRenderChart('c1', buildC1, dep, cfs, inst => { ch1 = inst; });
+  ch1 = makeChart('c1', buildC1, dep, cfs);
 }
 function renderC2(dep, cfs) {
-  if (ch2) { ch2.destroy(); ch2 = null; }
+  if (ch2) { try{ch2.destroy();}catch(e){} ch2 = null; }
   if (!dep.length) return;
-  doRenderChart('c2', buildC2, dep, cfs, inst => { ch2 = inst; });
+  ch2 = makeChart('c2', buildC2, dep, cfs);
 }
 
 // ── TABLE ─────────────────────────────────────────────────────────────────────
@@ -735,15 +722,11 @@ function openFS(which){
   requestAnimationFrame(()=>renderFS());
 }
 function renderFS(){
-  if(chFs){chFs.destroy();chFs=null;}
+  if(chFs){try{chFs.destroy();}catch(e){} chFs=null;}
   const dep=getDepot(),cfs=getCF(dep);
   const canvas=document.getElementById('cfs');
   const existing=Chart.getChart(canvas);
   if(existing)existing.destroy();
-  canvas.removeAttribute('width');
-  canvas.removeAttribute('height');
-  canvas.style.width='100%';
-  canvas.style.height='100%';
   const cfg=fsWhich==='1'?buildC1(dep,cfs,'cfs'):buildC2(dep,cfs,'cfs');
   if(cfg){
     if(cfg.options?.scales?.x?.ticks)cfg.options.scales.x.ticks.maxTicksLimit=14;
@@ -778,26 +761,76 @@ function setupDD(){
 function handleFile(e){if(e.target.files[0])processFile(e.target.files[0]);}
 
 function processFile(file){
-  const r=new FileReader();
-  r.onload=e=>{
-    try{
-      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      // raw:false gives formatted strings → handles German number format
-      const raw=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
-      parseRows(raw);
-    }catch(err){showS('Lesefehler: '+err.message,'err');}
-  };
-  r.readAsArrayBuffer(file);
+  const isCsv = file.name.toLowerCase().endsWith('.csv');
+  if(isCsv){
+    // CSV: read as text, detect separator
+    const r=new FileReader();
+    r.onload=e=>{
+      try{
+        const text=e.target.result;
+        parseCsvText(text);
+      }catch(err){showS('CSV Fehler: '+err.message,'err');}
+    };
+    r.readAsText(file, 'utf-8');
+  } else {
+    // Excel
+    const r=new FileReader();
+    r.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const raw=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+        parseRows(raw);
+      }catch(err){showS('Excel Fehler: '+err.message,'err');}
+    };
+    r.readAsArrayBuffer(file);
+  }
+}
+
+function parseCsvText(text){
+  // Remove BOM if present
+  const clean = text.replace(/^﻿/,'');
+  const lines = clean.split(/
+?
+/).filter(l=>l.trim());
+  if(!lines.length){showS('Leere Datei','err');return;}
+  
+  // Detect separator: semicolon or comma
+  const sep = lines[0].includes(';') ? ';' : ',';
+  
+  const raw = lines.map(l => {
+    // Split by separator but respect quoted fields
+    const fields=[];
+    let cur='', inQ=false;
+    for(const ch of l){
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===sep&&!inQ){fields.push(cur);cur='';}
+      else cur+=ch;
+    }
+    fields.push(cur);
+    return fields.map(f=>f.trim().replace(/^"|"$/g,''));
+  });
+  
+  parseRows(raw);
 }
 
 function parseNum(s){
   if(s===''||s===null||s===undefined)return NaN;
   if(typeof s==='number')return s;
-  const str=String(s).trim().replace(/\s/g,'').replace(/€/g,'');
-  // German: 1.234,56 → remove dots, replace comma
+  const str=String(s).trim().replace(/\s/g,'').replace(/€/g,'').replace(/\u202F/g,'');
+  if(!str)return NaN;
+  // German format: 1.234,56 (dot=thousands, comma=decimal)
   if(str.includes('.')&&str.includes(','))return parseFloat(str.replace(/\./g,'').replace(',','.'));
+  // Only comma: 5000,57 → decimal comma
   if(str.includes(',')&&!str.includes('.'))return parseFloat(str.replace(',','.'));
+  // Only dot: might be decimal (1234.56) or thousands (1.234) 
+  // If dot appears once and has exactly 2 digits after → decimal
+  const dotMatch=str.match(/^(\d+)\.(\d+)$/);
+  if(dotMatch){
+    // e.g. "5000.57" → decimal, "5.000" → thousands (3 digits after dot)
+    if(dotMatch[2].length<=2)return parseFloat(str);
+    return parseFloat(str.replace(/\./g,'')); // treat as thousands sep
+  }
   return parseFloat(str);
 }
 
