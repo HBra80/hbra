@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RiskCtrl — Journal v1.6</title>
+<title>RiskCtrl — Journal v1.7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -186,7 +186,7 @@ tr:hover td{background:var(--bg3);}
 <header class="header">
   <div class="hdr-l">
     <div class="logo">RISKCTRL</div>
-    <div class="vbadge">JOURNAL v1.6</div>
+    <div class="vbadge">JOURNAL v1.7</div>
   </div>
   <div class="hdr-r">
     <button class="btn btn-sm" onclick="exportCSV()">⬇ CSV</button>
@@ -324,8 +324,9 @@ async function loadData(){
     sb.from('depot_history').select('*').order('date',{ascending:true}),
     sb.from('cashflows').select('*').order('date',{ascending:true})
   ]);
-  allDepot=d1.data||[];
-  allCF=d2.data||[];
+  // Ensure numeric fields are proper numbers (Supabase can return strings)
+  allDepot=(d1.data||[]).map(r=>({...r, depot_value:parseFloat(r.depot_value)||0}));
+  allCF=(d2.data||[]).map(r=>({...r, amount:parseFloat(r.amount)||0}));
 }
 
 // ── FILTER ────────────────────────────────────────────────────────────────────
@@ -355,10 +356,12 @@ function getDepot(){
   else if(activeF==='1m'){from=new Date(today);from.setMonth(from.getMonth()-1);}
   else if(activeF==='1w'){from=new Date(today);from.setDate(from.getDate()-7);}
   else if(activeF==='today'){from=new Date(today);}
+  // Compare as strings to avoid UTC/local timezone issues
+  const fromStr = from ? from.toISOString().slice(0,10) : null;
+  const toStr = to ? to.toISOString().slice(0,10) : null;
   return allDepot.filter(d=>{
-    const dt=new Date(d.date);
-    if(from&&dt<from)return false;
-    if(to&&dt>to)return false;
+    if(fromStr && d.date < fromStr) return false;
+    if(toStr && d.date > toStr) return false;
     return true;
   });
 }
@@ -520,25 +523,35 @@ function buildC1(dep,cfsForDisplay,canvasId){
 
 function buildC2(dep,cfs,canvasId){
   const valid=dep.filter(d=>d.depot_value>0);
-  if(valid.length<2){console.warn('[C2] not enough valid points:',valid.length);return null;}
+  console.log('[C2] valid points:',valid.length,'of',dep.length,'bmSPY:',Object.keys(bmData.spy).length,'bmQQQ:',Object.keys(bmData.qqq).length);
+  if(valid.length<2){
+    console.warn('[C2] not enough valid points, skipping');
+    return null;
+  }
   // Use ALL CFs in period for daily perf calculation
   const periodCFs=allCF.filter(c=>c.date>=valid[0].date&&c.date<=valid[valid.length-1].date);
   const perf=dailyPerf(valid,periodCFs);
   const labels=perf.map(d=>d.date);
-  const dpct=perf.map(d=>d.pct);
+  // Convert cumulative % to index (base=100)
+  const dpct=perf.map(d=>100*(1+d.pct/100));
   const sd=labels[0];
 
   function alignBM(closes){
     if(!closes||!Object.keys(closes).length)return null;
     const sds=Object.keys(closes).sort();
+    // Find base price: last close on or before startDate
     let bp=null;
-    for(const d of sds){if(d<=sd)bp=closes[d];}
-    if(!bp)bp=closes[sds[0]];
+    for(const d of sds){ if(d<=sd) bp=closes[d]; }
+    if(!bp){ // fallback: first available close
+      for(const d of sds){ if(d>=sd){ bp=closes[d]; break; } }
+    }
     if(!bp)return null;
+    // Map each depot date to a normalized value (base=100)
     return labels.map(lbl=>{
       let p=null;
-      for(const d of sds){if(d<=lbl)p=closes[d];}
-      return p?(p/bp-1)*100:null;
+      for(const d of sds){ if(d<=lbl) p=closes[d]; }
+      if(!p) return null;
+      return (p/bp)*100; // Index 100 = start
     });
   }
   const spy=alignBM(bmData.spy);
@@ -585,7 +598,7 @@ function buildC2(dep,cfs,canvasId){
       }},
       scales:{
         x:{ticks:{color:'#5a5a72',font:{family:'JetBrains Mono',size:9},maxTicksLimit:8,maxRotation:0},grid:{color:'rgba(42,42,58,.4)'},border:{color:'rgba(42,42,58,.4)'}},
-        y:{ticks:{color:'#5a5a72',font:{family:'JetBrains Mono',size:9},callback:v=>(v>=0?'+':'')+v.toFixed(1)+'%'},grid:{color:'rgba(42,42,58,.25)'},border:{color:'rgba(42,42,58,.4)'}}
+        y:{ticks:{color:'#5a5a72',font:{family:'JetBrains Mono',size:9},callback:v=>v.toFixed(0)},grid:{color:'rgba(42,42,58,.25)'},border:{color:'rgba(42,42,58,.4)'}}
       }
     }
   };
