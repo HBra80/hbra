@@ -788,29 +788,25 @@ function processFile(file){
 }
 
 function parseCsvText(text){
-  // Remove BOM if present
-  const clean = text.replace(/^﻿/,'');
-  const lines = clean.split(/
-?
-/).filter(l=>l.trim());
+  // Remove BOM, normalize line endings
+  var clean=text;
+  if(clean.charCodeAt(0)===0xFEFF)clean=clean.slice(1);
+  clean=clean.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  var lines=clean.split('\n').filter(function(l){return l.trim()!=='';});
   if(!lines.length){showS('Leere Datei','err');return;}
-  
-  // Detect separator: semicolon or comma
-  const sep = lines[0].includes(';') ? ';' : ',';
-  
-  const raw = lines.map(l => {
-    // Split by separator but respect quoted fields
-    const fields=[];
-    let cur='', inQ=false;
-    for(const ch of l){
+  // Detect separator
+  var sep=lines[0].indexOf(';')>=0?';':',';
+  var raw=lines.map(function(l){
+    var fields=[],cur='',inQ=false;
+    for(var i=0;i<l.length;i++){
+      var ch=l[i];
       if(ch==='"'){inQ=!inQ;}
-      else if(ch===sep&&!inQ){fields.push(cur);cur='';}
+      else if(ch===sep&&!inQ){fields.push(cur.trim());cur='';}
       else cur+=ch;
     }
-    fields.push(cur);
-    return fields.map(f=>f.trim().replace(/^"|"$/g,''));
+    fields.push(cur.trim());
+    return fields.map(function(f){return f.replace(/^"|"$/g,'');});
   });
-  
   parseRows(raw);
 }
 
