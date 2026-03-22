@@ -7,6 +7,8 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f0f2f5'/><text x='3' y='23' font-family='Arial Black' font-weight='900' font-size='17' fill='%231a6aff'>R</text><text x='16' y='23' font-family='Arial Black' font-weight='900' font-size='17' fill='%23f56a00'>C</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammerjs/2.0.8/hammer.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -269,8 +271,11 @@ textarea::placeholder{color:var(--muted2);}
 .period-tabs{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap;}
 .period-btn{padding:5px 12px;font-size:12px;font-weight:600;border-radius:20px;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;-webkit-appearance:none;}
 .period-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
-.chart-wrap{position:relative;height:220px;background:var(--white);border-radius:8px;padding:12px;border:1px solid var(--border);margin-bottom:16px;}
-.chart-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;}
+.chart-wrap{position:relative;height:220px;background:var(--white);border-radius:8px;padding:12px;border:1px solid var(--border);margin-bottom:16px;transition:height .3s;}
+.chart-wrap.expanded{height:480px;}
+.chart-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.chart-expand-btn{font-size:12px;cursor:pointer;color:var(--muted2);background:none;border:none;padding:0 2px;line-height:1;transition:color .15s;}
+.chart-expand-btn:hover{color:var(--blue);}
 .charts-grid{display:grid;grid-template-columns:1fr;gap:0;}
 @media(min-width:700px){.charts-grid{grid-template-columns:1fr 1fr;gap:14px;}}
 .trades-table{width:100%;border-collapse:collapse;font-size:12px;}
@@ -421,7 +426,7 @@ textarea::placeholder{color:var(--muted2);}
   <div class="header">
     <div class="logo-wrap">
       <div class="logo">RISK<em>CTRL</em></div>
-      <div class="ver-badge"><span class="dot"></span>v2.7.1</div>
+      <div class="ver-badge"><span class="dot"></span>v2.7.3</div>
     </div>
     <div class="header-right">
       <button id="refreshAllBtn" onclick="refreshAll()"><span id="refreshAllIcon">↻</span> Kurse</button>
@@ -622,20 +627,20 @@ textarea::placeholder{color:var(--muted2);}
       <!-- CHARTS -->
       <div class="charts-grid">
         <div>
-          <div class="chart-wrap">
-            <div class="chart-title">P&amp;L kumulativ (€)</div>
+          <div class="chart-wrap" id="wrapPnl">
+            <div class="chart-title">P&amp;L kumulativ (€)<button class="chart-expand-btn" onclick="toggleChart('wrapPnl',this)" title="Vergrößern">⤢</button></div>
             <canvas id="chartPnl"></canvas>
           </div>
         </div>
         <div>
-          <div class="chart-wrap">
-            <div class="chart-title">Performance vs. Depot · S&amp;P500 · NASDAQ (%)</div>
+          <div class="chart-wrap" id="wrapPerf">
+            <div class="chart-title">Performance vs. Depot · S&amp;P500 · NASDAQ (%)<div style="display:flex;gap:6px"><button class="chart-expand-btn" onclick="resetZoom('chartPerfInst')" title="Zoom zurücksetzen">⊙</button><button class="chart-expand-btn" onclick="toggleChart('wrapPerf',this)" title="Vergrößern">⤢</button></div></div>
             <canvas id="chartPerf"></canvas>
           </div>
         </div>
       </div>
-      <div class="chart-wrap" style="margin-bottom:16px">
-        <div class="chart-title">Depotwert-Entwicklung (€)</div>
+      <div class="chart-wrap" id="wrapDepot" style="margin-bottom:16px">
+        <div class="chart-title">Depotwert-Entwicklung (€)<div style="display:flex;gap:6px"><button class="chart-expand-btn" onclick="resetZoom('chartDepotInst')" title="Zoom zurücksetzen">⊙</button><button class="chart-expand-btn" onclick="toggleChart('wrapDepot',this)" title="Vergrößern">⤢</button></div></div>
         <canvas id="chartDepot"></canvas>
       </div>
 
@@ -1327,6 +1332,20 @@ function setPeriod(p){
 
 function filterTradesByPeriod(list){return filterByPeriod(list,'sell_date');}
 
+function toggleChart(wrapId,btn){
+  const el=document.getElementById(wrapId);
+  if(!el)return;
+  const expanded=el.classList.toggle('expanded');
+  btn.textContent=expanded?'⤡':'⤢';
+  btn.title=expanded?'Verkleinern':'Vergrößern';
+  // Chart neu rendern damit Canvas-Größe stimmt
+  setTimeout(()=>{
+    if(wrapId==='wrapPnl'&&chartPnlInst)chartPnlInst.resize();
+    if(wrapId==='wrapPerf'&&chartPerfInst)chartPerfInst.resize();
+    if(wrapId==='wrapDepot'&&chartDepotInst)chartDepotInst.resize();
+  },320);
+}
+
 // ═══════════════════════════
 // DEPOT HISTORY TABLE
 // ═══════════════════════════
@@ -1463,8 +1482,8 @@ function renderJournal(){
   // Frühestes Datum aus Trades + Depot-History des gewählten Zeitraums
   const todayVal=parseFloat(document.getElementById('depotValue').value)||null;
   const today=todayStr();
+  // histData NUR aus echten DB-Einträgen — kein todayVal aus Header (könnte veraltet sein)
   let histData=[...depotHistory];
-  if(todayVal){const ex=histData.find(d=>d.date===today);if(ex)ex.value=todayVal;else histData.push({date:today,value:todayVal});}
   histData.sort((a,b)=>a.date.localeCompare(b.date));
   const depotFiltered=filterByPeriod(histData,'date');
 
@@ -1539,26 +1558,33 @@ function renderJournal(){
     mdData=allDates.map(()=>null);
   }
 
-  // Cashflow-Punkte für Annotation
-  const cfAnnotations=cashflows.filter(c=>allDates.includes(c.date)).map(c=>({
-    date:c.date,amount:c.amount,
-    idx:allDates.indexOf(c.date),
-    pct:mdData[allDates.indexOf(c.date)]
-  })).filter(c=>c.pct!==null);
+  // Cashflow-Punkte — nur CFs innerhalb des Chart-Zeitraums, erste Einzahlung ausschließen
+  const chartStartDate=depotFiltered.length?depotFiltered[0].date:'';
+  const labelArr=allDates.map(fmtLbl);
+  const cfAnnotations=cashflows.filter(c=>c.date>chartStartDate&&allDates.some(d=>d>=c.date)).map(c=>{
+    let idx=allDates.findIndex(d=>d>=c.date);
+    if(idx===-1)idx=allDates.length-1;
+    if(idx<0||mdData[idx]===null||mdData[idx]===undefined)return null;
+    return{date:c.date,amount:c.amount,idx,
+      label:new Date(c.date+'T00:00:00').toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'2-digit'}),
+      pct:mdData[idx]};
+  }).filter(Boolean);
 
-  // Cashflow-Datensatz als Scatter-Punkte
-  const cfScatterData=cfAnnotations.map(c=>({x:allDates.map(fmtLbl)[c.idx],y:c.pct,amount:c.amount}));
+  const cfScatterData=cfAnnotations.map(c=>({x:labelArr[c.idx],y:c.pct,amount:c.amount,date:c.label}));
 
   const tooltipCb={
     callbacks:{
+      title:items=>{if(!items.length)return'';return allDates[items[0].dataIndex]?new Date(allDates[items[0].dataIndex]+'T00:00:00').toLocaleDateString('de-AT',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}):items[0].label;},
       label:ctx=>{
         if(ctx.dataset.label==='Cashflows'){
           const pt=ctx.raw;
           const sign=pt.amount>0?'+':'';
-          return`${sign}€${fmt(Math.abs(pt.amount),0)} ${pt.amount>0?'Einzahlung':'Entnahme'}`;
+          return`📅 ${pt.date}: ${sign}€${fmt(Math.abs(pt.amount),0)} ${pt.amount>0?'Einzahlung':'Entnahme'}`;
         }
-        return`${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)}%`;
-      }
+        if(ctx.parsed.y===null||ctx.parsed.y===undefined)return null;
+        return`${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`;
+      },
+      filter:item=>item.parsed.y!==null&&item.parsed.y!==undefined
     }
   };
 
@@ -1579,7 +1605,8 @@ function renderJournal(){
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:true,position:'top',labels:{font:{size:10},boxWidth:12,padding:8,color:chartColor}},
-        tooltip:{...tooltipCb,mode:'index',intersect:false}
+        tooltip:{...tooltipCb,mode:'index',intersect:false},
+        zoom:{zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x'},pan:{enabled:true,mode:'x'}}
       },
       scales:{
         x:{ticks:{font:{size:10},maxTicksLimit:6,color:chartColor},grid:{color:chartGrid}},
@@ -1619,11 +1646,16 @@ function renderJournal(){
   let lastDV=null;
   const depotLine=depotAllDates.map(d=>{if(depotMapD[d])lastDV=depotMapD[d];return lastDV;});
 
-  // Cashflow-Punkte für Depot-Chart
-  const cfDepotScatter=cashflows.filter(c=>depotAllDates.includes(c.date)).map(c=>{
-    const idx=depotAllDates.indexOf(c.date);
-    return{x:depotAllDates.map(fmtLbl)[idx],y:depotLine[idx],amount:c.amount};
-  }).filter(c=>c.y!==null);
+  // Cashflow-Punkte für Depot-Chart — exakte Tage, erste Einzahlung separat behandeln
+  const depotLabelArr=depotAllDates.map(fmtLbl);
+  const cfDepotScatter=cashflows.map(c=>{
+    // Ersten Tag (Ersteinzahlung) auch anzeigen aber als eigene Farbe
+    let idx=depotAllDates.findIndex(d=>d>=c.date);
+    if(idx===-1)idx=depotAllDates.length-1;
+    if(idx<0||depotLine[idx]===null||depotLine[idx]===undefined)return null;
+    return{x:depotLabelArr[idx],y:depotLine[idx],amount:c.amount,
+      date:new Date(c.date+'T00:00:00').toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'2-digit'})};
+  }).filter(c=>c!==null);
 
   if(chartDepotInst)chartDepotInst.destroy();
   chartDepotInst=new Chart(document.getElementById('chartDepot').getContext('2d'),{type:'line',
@@ -1642,33 +1674,41 @@ function renderJournal(){
         tooltip:{
           mode:'index',intersect:false,
           callbacks:{
+            title:items=>{if(!items.length)return'';const d=depotAllDates[items[0].dataIndex];return d?new Date(d+'T00:00:00').toLocaleDateString('de-AT',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}):items[0].label;},
             label:ctx=>{
               if(ctx.dataset.label==='Cashflows'){
-                const pt=ctx.raw;
+                const pt=ctx.raw;if(!pt)return null;
                 const sign=pt.amount>0?'+':'';
-                return`${sign}€${fmt(Math.abs(pt.amount),0)} ${pt.amount>0?'Einzahlung':'Entnahme'}`;
+                return`📅 ${pt.date}: ${sign}€${fmt(Math.abs(pt.amount),0)} ${pt.amount>0?'Einzahlung':'Entnahme'}`;
               }
+              if(ctx.parsed.y===null||ctx.parsed.y===undefined)return null;
               return`Depot: €${fmt(ctx.parsed.y,2)}`;
-            }
+            },
+            filter:item=>item.parsed.y!==null&&item.parsed.y!==undefined
           }
         }
       },
       scales:{
         x:{ticks:{font:{size:10},maxTicksLimit:6,color:chartColor},grid:{color:chartGrid}},
         y:{ticks:{font:{size:10},callback:v=>'€'+fmt(v,0),color:chartColor},grid:{color:chartGrid}}
+      },
+      plugins:{
+        legend:{display:false},
+        zoom:{zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x'},pan:{enabled:true,mode:'x'}}
       }
     }});
 
-  // Modified Dietz p.a. KPI — korrekte Methode
+  // Modified Dietz p.a. KPI — nur echte DB-Einträge, kein Header-Input-Wert
   const twrEl=document.getElementById('jTwr');
-  if(twrEl&&depotFiltered.length>=2){
-    const startVal=depotFiltered[0].value;
-    const startDate=depotFiltered[0].date;
-    const endVal=depotFiltered[depotFiltered.length-1].value;
-    const endDate=depotFiltered[depotFiltered.length-1].date;
+  // Nur echte depotHistory-Einträge verwenden (nicht durch todayVal verfälscht)
+  const realDepotForKpi=filterByPeriod([...depotHistory].sort((a,b)=>a.date.localeCompare(b.date)),'date');
+  if(twrEl&&realDepotForKpi.length>=2){
+    const startVal=realDepotForKpi[0].value;
+    const startDate=realDepotForKpi[0].date;
+    const endVal=realDepotForKpi[realDepotForKpi.length-1].value;
+    const endDate=realDepotForKpi[realDepotForKpi.length-1].date;
     const totalDays2=Math.max(1,(new Date(endDate+'T00:00:00')-new Date(startDate+'T00:00:00'))/86400000);
     const years2=totalDays2/365.25;
-    // Alle CFs nach dem Starttag (Ersteinzahlung ist im startVal enthalten)
     let netCf=0,weightedCf=0;
     cashflows.forEach(c=>{
       if(c.date>startDate&&c.date<=endDate){
@@ -1682,10 +1722,11 @@ function renderJournal(){
     if(denom>0){
       const md=(endVal-startVal-netCf)/denom;
       const mdPa=years2>0?((1+md)**(1/years2)-1)*100:md*100;
+      console.log(`Mod.Dietz: start=${startVal} end=${endVal} startDate=${startDate} endDate=${endDate} days=${totalDays2} netCf=${netCf} wCf=${weightedCf.toFixed(0)} denom=${denom.toFixed(0)} md=${(md*100).toFixed(2)}% pa=${mdPa.toFixed(2)}%`);
       const sign=mdPa>0?'+':'';
       twrEl.textContent=sign+fmt(mdPa,2)+'% p.a.';
       twrEl.style.color=mdPa>0?'var(--green)':mdPa<0?'var(--red)':'var(--muted)';
-      twrEl.title=`Mod. Dietz gesamt: ${md>0?'+':''}${fmt(md*100,2)}% über ${totalDays2} Tage`;
+      twrEl.title=`Mod. Dietz gesamt: ${md>0?'+':''}${fmt(md*100,2)}% · ${totalDays2} Tage · Start ${fmtE(startVal,0)} → Ende ${fmtE(endVal,0)}`;
     }else{twrEl.textContent='—';twrEl.style.color='var(--muted)';}
   }else if(twrEl){twrEl.textContent='—';twrEl.style.color='var(--muted)';}
 
