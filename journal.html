@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RiskCtrl — Journal v1.8</title>
+<title>RiskCtrl — Journal v2.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -186,7 +186,7 @@ tr:hover td{background:var(--bg3);}
 <header class="header">
   <div class="hdr-l">
     <div class="logo">RISKCTRL</div>
-    <div class="vbadge">JOURNAL v1.8</div>
+    <div class="vbadge">JOURNAL v2.2</div>
   </div>
   <div class="hdr-r">
     <button class="btn btn-sm" onclick="exportCSV()">⬇ CSV</button>
@@ -202,7 +202,6 @@ tr:hover td{background:var(--bg3);}
     <button class="fbtn" onclick="setFilter('1y',this)">1 Jahr</button>
     <button class="fbtn" onclick="setFilter('1m',this)">Monat</button>
     <button class="fbtn" onclick="setFilter('1w',this)">Woche</button>
-    <button class="fbtn" onclick="setFilter('today',this)">Heute</button>
     <div class="fsep"></div>
     <div class="drange">
       <span class="dlbl">Von</span>
@@ -332,10 +331,28 @@ async function loadData(){
 // ── FILTER ────────────────────────────────────────────────────────────────────
 function setFilter(f,el){
   activeF=f; cFrom=cTo=null;
-  document.getElementById('dFrom').value='';
-  document.getElementById('dTo').value='';
   document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
   if(el)el.classList.add('active');
+  // Show computed date range in Von/Bis fields
+  const today=new Date(); today.setHours(0,0,0,0);
+  const toStr=today.toISOString().slice(0,10);
+  let fromStr='';
+  if(f==='ytd'){
+    fromStr=new Date(today.getFullYear(),0,1).toISOString().slice(0,10);
+  } else if(f==='1y'){
+    const d=new Date(today); d.setFullYear(d.getFullYear()-1);
+    fromStr=d.toISOString().slice(0,10);
+  } else if(f==='1m'){
+    const d=new Date(today); d.setMonth(d.getMonth()-1);
+    fromStr=d.toISOString().slice(0,10);
+  } else if(f==='1w'){
+    const d=new Date(today); d.setDate(d.getDate()-7);
+    fromStr=d.toISOString().slice(0,10);
+  } else { // 'all'
+    fromStr=allDepot.length?allDepot[0].date:'';
+  }
+  document.getElementById('dFrom').value=fromStr;
+  document.getElementById('dTo').value=f==='all'?(allDepot.length?allDepot[allDepot.length-1].date:''):toStr;
   renderAll();
 }
 function setCustom(){
@@ -355,7 +372,6 @@ function getDepot(){
   else if(activeF==='1y'){from=new Date(today);from.setFullYear(from.getFullYear()-1);}
   else if(activeF==='1m'){from=new Date(today);from.setMonth(from.getMonth()-1);}
   else if(activeF==='1w'){from=new Date(today);from.setDate(from.getDate()-7);}
-  else if(activeF==='today'){from=new Date(today);}
   // Compare as strings to avoid UTC/local timezone issues
   const fromStr = from ? from.toISOString().slice(0,10) : null;
   const toStr = to ? to.toISOString().slice(0,10) : null;
@@ -435,10 +451,12 @@ function renderKPIs(dep,cfs){
   }
   const sv=dep[0].depot_value, ev=dep[dep.length-1].depot_value;
   const sd=dep[0].date, ed=dep[dep.length-1].date;
-  const gs=allDepot.length?allDepot[0].depot_value:sv;
   const firstDay=allDepot.length?allDepot[0].date:sd;
-  const gncf=allCF.filter(c=>c.date>firstDay).reduce((s,c)=>s+c.amount,0);
-  const invested=gs+gncf;
+  // CF am ersten Tag (Ersteinzahlung) + alle CFs danach
+  // Nicht den Depotwert nehmen (enthält bereits Tagesgewinn)
+  const firstDayCF=allCF.filter(c=>c.date===firstDay).reduce((s,c)=>s+c.amount,0);
+  const laterCF=allCF.filter(c=>c.date>firstDay).reduce((s,c)=>s+c.amount,0);
+  const invested=firstDayCF+laterCF;
   const pnl=ev-invested;
   const r=modDietz(sv,ev,cfs,sd,ed);
   const rpa=annualize(r,sd,ed);
@@ -663,12 +681,13 @@ function renderTable(dep,cfs){
           <tbody>`;
     for(let i=0;i<rows.length;i++){
       const row=rows[i];
-      const pr=rows[i+1]||allDepot.find(d=>d.date<row.date);
-      const ce=pr?row.depot_value-pr.depot_value:0;
-      const cp=pr&&pr.depot_value?(ce/pr.depot_value)*100:0;
-      const cc=ce>=0?'tp':'tn';
-      const rcs=cfMap[row.date]||[];
-      let cfc='<span class="t0">—</span>';
+      // prev only within filtered period — never compare first entry against outside data
+      const pr = rows[i+1] || null;
+      const ce = pr ? row.depot_value - pr.depot_value : 0;
+      const cp = pr && pr.depot_value ? (ce / pr.depot_value) * 100 : 0;
+      const cc = ce >= 0 ? 'tp' : 'tn';
+      const rcs = cfMap[row.date] || [];
+      let cfc = '<span class="t0">—</span>';
       if(rcs.length){const t=rcs.reduce((s,c)=>s+c.amount,0);cfc=`<span class="${t>=0?'tp':'tn'}">${t>=0?'+':''}${fEur(t)}</span>`;}
       html+=`<tr>
         <td class="tdate">${fDate(row.date)}</td>
