@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grid Trading Simulator v4</title>
+<title>Grid Trading Simulator v4.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -94,13 +94,19 @@ tr:hover td{background:var(--surface)}
 <!-- HEADER -->
 <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
   <div>
-    <h1>Grid Trading Simulator <span class="vbadge">v4.0</span></h1>
-    <div class="subtitle">QQQ-Kursdaten ab 2010 · Flexibler Zeitraum · Supabase-Presets · Hebel Broker-Fix · Auto-Optimierung</div>
+    <h1>Grid Trading Simulator <span class="vbadge">v4.1</span></h1>
+    <div class="subtitle">QQQ/SPY ab 2010 aus Supabase DB · Flexibler Zeitraum · Supabase-Presets · Hebel Broker-Fix · Auto-Optimierung</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <span id="syncBadge" class="sbadge sing" style="display:none"><span id="syncText">…</span></span>
     <span class="sdot dload" id="hdot"></span>
     <span style="font-size:12px;color:var(--muted)" id="dataStatus">Kursdaten werden geladen…</span>
+    <select id="symbolSel" style="font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--text);font-family:var(--mono)">
+      <option value="QQQ">QQQ (NASDAQ)</option>
+      <option value="SPY">SPY (S&P 500)</option>
+    </select>
+    <button id="loadDbBtn" style="font-size:11px;padding:4px 10px">↓ Laden</button>
+    <button id="fetchFreshBtn" style="font-size:11px;padding:4px 10px;color:var(--orange);border-color:var(--orange)" title="Daten via price-loader Edge Function neu in DB laden">⟳ DB aktualisieren</button>
   </div>
 </div>
 
@@ -343,7 +349,7 @@ tr:hover td{background:var(--surface)}
 
 <!-- FOOTER -->
 <div style="text-align:center;font-size:11px;color:var(--muted2);padding:8px 0">
-  Grid Trading Simulator <span class="vbadge" style="font-size:10px">v4.0</span> · QQQ via Supabase Edge Function <code style="font-family:var(--mono)">stock-price-history</code> · Presets in <code style="font-family:var(--mono)">sim_presets</code>
+  Grid Trading Simulator <span class="vbadge" style="font-size:10px">v4.1</span> · Kursdaten aus Supabase <code style="font-family:var(--mono)">price_history</code> · Presets in <code style="font-family:var(--mono)">sim_presets</code>
 </div>
 
 </div>
@@ -363,7 +369,7 @@ tr:hover td{background:var(--surface)}
 </div>
 
 <script>
-const VER='v4.0';
+const VER='v4.1';
 const SB_URL='https://cltfjarsnvpxgzlirtiv.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdGZqYXJzbnZweGd6bGlydGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzg1ODQsImV4cCI6MjA4ODkxNDU4NH0.kXs7tW9DcDSThW3NbK9MsMH5FfHs65ZCNBxS-cvI7bk';
 
@@ -389,33 +395,69 @@ function showAlert(m){const b=$('alertBox');b.textContent=m;b.style.display='blo
 function showOk(m){const b=$('okBox');b.textContent=m;b.style.display='block';setTimeout(()=>b.style.display='none',4000);}
 function setSS(type,msg){const b=$('syncBadge');b.style.display='flex';b.className='sbadge s'+type;$('syncText').textContent=msg;if(type==='ok')setTimeout(()=>b.style.display='none',3000);}
 
-// ── Load data ──
-async function loadData(){
+// ── Load data from Supabase price_history table ──
+// Liest echte Tagespreise direkt aus der DB-Tabelle — kein Edge Function Call
+async function loadData(symbol){
+  symbol = symbol || $('symbolSel').value || 'QQQ';
+  $('hdot').className='sdot dload';
+  $('dataStatus').textContent=`${symbol}-Kursdaten werden aus DB geladen…`;
+  setSS('ing',`${symbol} laden…`);
   try{
-    setSS('ing','QQQ-Verlaufsdaten ab 2010 laden…');
-    $('hdot').className='sdot dload';$('dataStatus').textContent='QQQ wird geladen (ab 2010)…';
-    const data=await (await fetch(`${SB_URL}/functions/v1/dynamic-responder`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${SB_KEY}`},body:JSON.stringify({symbol:'QQQ'})})).json();
-    if(!data.dailyCloses||Object.keys(data.dailyCloses).length<100) throw new Error('Zu wenig Daten');
-    const entries=Object.entries(data.dailyCloses).filter(([d])=>d>='2010-01-01').sort((a,b)=>a[0]<b[0]?-1:1);
-    allDates=entries.map(e=>e[0]);allPrices=entries.map(e=>+e[1]);
+    // Alle Zeilen für dieses Symbol ab 2010-01-01, aufsteigend nach Datum
+    const rows = await sbFetch(`price_history?symbol=eq.${symbol}&date=gte.2010-01-01&order=date.asc&select=date,close`);
+    if(!rows||rows.length<100) throw new Error(`Zu wenig Datenpunkte (${rows?.length||0}) — bitte zuerst DB aktualisieren`);
+    allDates  = rows.map(r=>r.date);
+    allPrices = rows.map(r=>parseFloat(r.close));
     $('hdot').className='sdot dok';
-    const from=allDates[0],to=allDates[allDates.length-1];
-    $('dataStatus').textContent=`QQQ: ${allDates.length} Handelstage (${from} → ${to})`;
-    $('dataInfo2').textContent=`QQQ ${from} → ${to} · ${allDates.length} Tage`;
-    setSS('ok',`QQQ geladen: ${allDates.length} Tage`);
+    const from=allDates[0], to=allDates[allDates.length-1];
+    $('dataStatus').textContent=`${symbol}: ${allDates.length} Handelstage (${from} → ${to})`;
+    $('dataInfo2').textContent=`${symbol} ${from} → ${to} · ${allDates.length} Tage`;
+    setSS('ok',`${symbol} geladen: ${allDates.length} Tage`);
     $('dateTo').value=to;
     setRange(5);
+    showOk(`${symbol}-Kursdaten geladen: ${allDates.length} Handelstage (${from} bis ${to})`);
   }catch(e){
-    $('hdot').className='sdot derr';setSS('err','Daten-Fehler: '+e.message);
+    $('hdot').className='sdot derr';
+    setSS('err','DB-Fehler: '+e.message);
+    showAlert(`Fehler beim Laden aus price_history: ${e.message}`);
+    // Fallback auf synthetische Daten
     allPrices=genSynth(3780);
     const base=new Date('2010-01-04');
     allDates=allPrices.map((_,i)=>{const d=new Date(base);d.setDate(base.getDate()+Math.floor(i*365/252));return d.toISOString().split('T')[0];});
     $('dateTo').value=allDates[allDates.length-1];
-    showAlert('QQQ-Daten nicht verfügbar — synthetische Fallback-Daten werden verwendet');
     setRange(5);
   }
   await loadPresets();
 }
+
+// DB aktualisieren via price-loader Edge Function (einmaliger Aufruf pro Symbol)
+async function fetchFresh(symbol){
+  symbol = symbol || $('symbolSel').value || 'QQQ';
+  if(!confirm(`${symbol}-Daten neu von Yahoo Finance laden und in Supabase DB speichern?\nDas dauert ca. 10–30 Sekunden.`)) return;
+  setSS('ing',`${symbol} wird von Yahoo geladen…`);
+  $('dataStatus').textContent=`${symbol} wird aktualisiert (Yahoo → Supabase DB)…`;
+  $('hdot').className='sdot dload';
+  try{
+    const res = await fetch(`${SB_URL}/functions/v1/price-loader`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${SB_KEY}`},
+      body:JSON.stringify({symbol})
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    setSS('ok',`${symbol}: ${data.inserted} Tage gespeichert`);
+    showOk(`${symbol} aktualisiert: ${data.total} Datenpunkte in DB gespeichert. Lade jetzt…`);
+    await loadData(symbol);
+  }catch(e){
+    setSS('err','Fehler: '+e.message);
+    $('hdot').className='sdot derr';
+    showAlert(`DB-Aktualisierung fehlgeschlagen: ${e.message}`);
+  }
+}
+
+$('loadDbBtn').addEventListener('click',()=>loadData($('symbolSel').value));
+$('fetchFreshBtn').addEventListener('click',()=>fetchFresh($('symbolSel').value));
+$('symbolSel').addEventListener('change',()=>loadData($('symbolSel').value));
 
 function genSynth(n){
   function bm(){let u;do{u=Math.random();}while(!u);return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*Math.random());}
@@ -634,7 +676,7 @@ $('pNameIn').addEventListener('keydown',e=>{if(e.key==='Enter')confirmModal();})
 $('modal').addEventListener('click',e=>{if(e.target===$('modal'))closeModal();});
 
 $('runBtn').addEventListener('click',run);
-loadData();
+loadData('QQQ');
 </script>
 </body>
 </html>
