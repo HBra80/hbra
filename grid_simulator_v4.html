@@ -438,7 +438,7 @@ async function fetchFresh(symbol){
   $('dataStatus').textContent=`${symbol} wird aktualisiert (Yahoo → Supabase DB)…`;
   $('hdot').className='sdot dload';
   try{
-    const res = await fetch(`${SB_URL}/functions/v1/price-loader`,{
+    const res = await fetch(`${SB_URL}/functions/v1/rapid-endpoint`,{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${SB_KEY}`},
       body:JSON.stringify({symbol})
