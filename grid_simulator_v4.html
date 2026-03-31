@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}
 th{font-weight:600;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
 td{padding:5px 8px;border-bottom:1px solid var(--surface);color:var(--text)}
 tr:hover td{background:var(--surface)}
-.mono{font-family:var(--mono)}.pos{color:var(--green)}.neg{color:var(--red)}
+.mono{font-family:var(--mono)}.pos{color:var(--green)}.neg{color:var(--red)}.warn{color:var(--orange)}
 .scroll{overflow-y:auto}
 .preset-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .pbtn{position:relative;padding:7px 8px;font-size:11px;border-radius:7px;border:1px solid var(--border);background:var(--surface);text-align:left;min-height:56px;cursor:pointer;transition:.15s;width:100%}
@@ -94,7 +94,7 @@ tr:hover td{background:var(--surface)}
 <!-- HEADER -->
 <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
   <div>
-    <h1>Grid Trading Simulator <span class="vbadge">v4.1</span></h1>
+    <h1>Grid Trading Simulator <span class="vbadge">v4.2</span></h1>
     <div class="subtitle">QQQ/SPY ab 2010 aus Supabase DB · Flexibler Zeitraum · Supabase-Presets · Hebel Broker-Fix · Auto-Optimierung</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -295,6 +295,7 @@ tr:hover td{background:var(--surface)}
     <button class="tab" onclick="showTab('monthly')">Monatliche Renditen</button>
     <button class="tab" onclick="showTab('histo')">Haltedauer</button>
     <button class="tab" onclick="showTab('heatmap')">Heatmap</button>
+    <button class="tab" onclick="showTab('daily')" style="border-color:var(--purple);color:var(--purple)">🔍 Tagesansicht</button>
   </div>
   <div id="tab-equity">
     <div style="display:flex;gap:16px;font-size:12px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap">
@@ -317,6 +318,37 @@ tr:hover td{background:var(--surface)}
   <div id="tab-heatmap" style="display:none">
     <div class="card-title">Gesamtrendite: Gewinnziel × Kaufgröße/Tag (Hebel fix, gewählter Zeitraum)</div>
     <div id="heatmapWrap" style="overflow-x:auto"><p style="color:var(--muted);font-size:13px">Simulation ausführen um Heatmap zu berechnen.</p></div>
+  </div>
+
+  <!-- TAGESANSICHT -->
+  <div id="tab-daily" style="display:none">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      <input type="text" id="daySearch" placeholder="Datum suchen (z.B. 2022-03 oder 2022-03-15)…"
+        style="flex:1;min-width:200px;border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:13px;font-family:var(--mono);background:var(--white);color:var(--text)">
+      <span style="font-size:12px;color:var(--muted)" id="dayCount">—</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="dayTable" style="font-size:12px;min-width:900px">
+        <thead>
+          <tr>
+            <th style="width:90px">Datum</th>
+            <th style="width:70px">Kurs</th>
+            <th style="width:60px">Tg. %</th>
+            <th style="width:65px">Idx DD</th>
+            <th style="width:65px">Kto DD</th>
+            <th style="width:80px">Depotwert</th>
+            <th style="width:65px">Cash</th>
+            <th style="width:45px">Pos.</th>
+            <th style="width:55px">Fin.K.</th>
+            <th style="width:55px">bMul</th>
+            <th>Käufe / Verkäufe des Tages</th>
+          </tr>
+        </thead>
+        <tbody id="dayBody">
+          <tr><td colspan="11" style="text-align:center;color:var(--muted2);padding:20px">Simulation ausführen um Tagesansicht zu befüllen</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -349,7 +381,7 @@ tr:hover td{background:var(--surface)}
 
 <!-- FOOTER -->
 <div style="text-align:center;font-size:11px;color:var(--muted2);padding:8px 0">
-  Grid Trading Simulator <span class="vbadge" style="font-size:10px">v4.1</span> · Kursdaten aus Supabase <code style="font-family:var(--mono)">price_history</code> · Presets in <code style="font-family:var(--mono)">sim_presets</code>
+  Grid Trading Simulator <span class="vbadge" style="font-size:10px">v4.2</span> · Kursdaten aus Supabase <code style="font-family:var(--mono)">price_history</code> · Presets in <code style="font-family:var(--mono)">sim_presets</code>
 </div>
 
 </div>
@@ -369,7 +401,7 @@ tr:hover td{background:var(--surface)}
 </div>
 
 <script>
-const VER='v4.1';
+const VER='v4.2';
 const SB_URL='https://cltfjarsnvpxgzlirtiv.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdGZqYXJzbnZweGd6bGlydGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzg1ODQsImV4cCI6MjA4ODkxNDU4NH0.kXs7tW9DcDSThW3NbK9MsMH5FfHs65ZCNBxS-cvI7bk';
 
@@ -466,12 +498,18 @@ function genSynth(n){
   return p;
 }
 
-// ── Date range ──
+// ── Date range — Referenz ist immer das letzte Datum in der DB, nicht heute ──
 function setRange(years){
   const to=allDates.length?allDates[allDates.length-1]:new Date().toISOString().split('T')[0];
   let from;
   if(years===0){from=allDates.length?allDates[0]:'2010-01-01';}
-  else{const d=new Date(to);d.setFullYear(d.getFullYear()-years);from=d.toISOString().split('T')[0];}
+  else{
+    // Rückwärts im allDates-Array suchen statt Datum arithmetisch zu berechnen
+    const toIdx=allDates.length-1;
+    const targetDays=Math.round(years*252);
+    const fromIdx=Math.max(0,toIdx-targetDays);
+    from=allDates[fromIdx];
+  }
   $('dateFrom').value=from;$('dateTo').value=to;
   updateFilter();
 }
@@ -507,46 +545,133 @@ function setParams(p){
   $('tog_py').dispatchEvent(new Event('change'));$('tog_brk').dispatchEvent(new Event('change'));
 }
 
-// ── Simulation ──
+// ── Simulation — speichert pro Tag vollständigen Snapshot für Tagesansicht ──
 function bm(){let u;do{u=Math.random();}while(!u);return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*Math.random());}
 function simulate(prices,dates,params,collectLog=true){
   const{capital0,leverage,mcLevel,financing,buyPct,tgtPct,maxPos,dd1,dd2,pyramiding,pyDD,pyMul,breaker,breakerThr,breakerDays:bkD}=params;
   const finD=financing/100/252,mcT=mcLevel/100;
   let cash=capital0,pos=[],closed=0,sumH=0,totFin=0,mCalls=0,pyCount=0;
   const eq=[capital0],ddP=[0],ddA=[0],hDist=new Array(31).fill(0),mRet=[],log=[],rets=[];
+  const daySnaps=[]; // Tages-Snapshots für Tagesansicht
   let peakEq=capital0,maxDD=0,maxDDA=0,bkCnt=0,mcOcc=false,mStart=capital0,lastM=0;
   const N=prices.length,ih=[prices[0]];
   for(let i=1;i<N;i++)ih.push(Math.max(ih[i-1],prices[i]));
+
+  // Tag 0 Snapshot
+  if(collectLog) daySnaps.push({date:dates?dates[0]:'T0',price:prices[0],idxATH:prices[0],idxDD:0,cash,openPos:[],depotVal:capital0,buys:[],sells:[],finCost:0,bkActive:false,bMul:1});
+
   for(let d=1;d<N;d++){
     if(mcOcc)break;
     const pr=prices[d],pp=prices[d-1],dt=dates?dates[d]:'T'+d;
     const lv=pos.reduce((s,p)=>s+p.not,0);
     const fc=lv*finD*Math.max(leverage-1,0);cash-=fc;totFin+=fc;
     let e=cash+pos.reduce((s,p)=>s+p.mg+(p.u*pr-p.not),0);
+
+    // Margin Call
     for(const p of pos){const loss=p.not-p.u*pr;if(p.mg>0&&loss/p.mg>=mcT){mCalls++;cash=Math.max(0,e);pos=[];e=cash;if(collectLog)log.push({day:d,date:dt,act:'MARGIN CALL',price:pr,amt:0,pnl:null,hold:null,isMC:true});if(e<50)mcOcc=true;break;}}
     if(mcOcc)break;
+
+    // Circuit Breaker
     if(bkCnt>0)bkCnt--;else if(breaker){const pv=eq[d-1]||capital0;if(pv>0&&(pv-e)/pv>breakerThr/100)bkCnt=bkD;}
+    const bkActive=bkCnt>0;
+
+    // Index DD & Kaufmultiplikator
     const idxDD=(ih[d]-pr)/ih[d];let bMul=1;if(idxDD>=dd2/100)bMul=0;else if(idxDD>=dd1/100)bMul=0.5;
     if(e>peakEq)peakEq=e;const aDD=peakEq>0?(peakEq-e)/peakEq:0;let aMul=1;if(aDD>=.20)aMul=.3;else if(aDD>=.10)aMul=.6;
     let isPy=false;if(pyramiding&&bMul>0&&bkCnt===0){const dc=(pr-pp)/pp;if(dc<=-pyDD/100){bMul=Math.min(bMul*pyMul,4);isPy=true;}}
-    if(bMul>0&&bkCnt===0&&pos.length<maxPos){const bn=Math.round(e*buyPct/100*bMul*aMul),mr=Math.round(bn/Math.max(leverage,1));if(mr>=5&&cash>=mr){pos.push({day:d,date:dt,price:pr,not:bn,mg:mr,u:bn/pr,isPy});cash-=mr;if(isPy)pyCount++;if(collectLog)log.push({day:d,date:dt,act:isPy?'Pyramiding':'Kauf',price:pr,amt:bn,pnl:null,hold:null,isPy});}}
-    const rem=[];for(const p of pos){const cn=p.u*pr,pp2=(cn-p.not)/p.not;if(pp2>=tgtPct){const pnl=cn-p.not;cash+=p.mg+pnl;closed++;const h=d-p.day;sumH+=h;hDist[Math.min(h,30)]++;if(collectLog)log.push({day:d,date:dt,act:'Verkauf',price:pr,amt:Math.round(cn),pnl:Math.round(pnl),hold:h,isPy:p.isPy});}else rem.push(p);}pos=rem;
-    e=cash+pos.reduce((s,p)=>s+p.mg+(p.u*pr-p.not),0);if(e>peakEq)peakEq=e;const dd=peakEq>0?(peakEq-e)/peakEq:0;maxDD=Math.max(maxDD,dd);maxDDA=Math.max(maxDDA,peakEq-e);eq.push(Math.max(0,Math.round(e)));ddP.push(-(dd*100));ddA.push(-Math.round(peakEq-e));
+
+    // Kauf
+    const dayBuys=[],daySells=[];
+    if(bMul>0&&bkCnt===0&&pos.length<maxPos){
+      const bn=Math.round(e*buyPct/100*bMul*aMul),mr=Math.round(bn/Math.max(leverage,1));
+      if(mr>=5&&cash>=mr){
+        pos.push({day:d,date:dt,price:pr,not:bn,mg:mr,u:bn/pr,isPy});
+        cash-=mr;if(isPy)pyCount++;
+        if(collectLog)log.push({day:d,date:dt,act:isPy?'Pyramiding':'Kauf',price:pr,amt:bn,pnl:null,hold:null,isPy});
+        dayBuys.push({price:pr,notional:bn,margin:mr,isPy});
+      }
+    }
+
+    // Take Profit
+    const rem=[];
+    for(const p of pos){
+      const cn=p.u*pr,pp2=(cn-p.not)/p.not;
+      if(pp2>=tgtPct){
+        const pnl=cn-p.not;cash+=p.mg+pnl;closed++;
+        const h=d-p.day;sumH+=h;hDist[Math.min(h,30)]++;
+        if(collectLog)log.push({day:d,date:dt,act:'Verkauf',price:pr,amt:Math.round(cn),pnl:Math.round(pnl),hold:h,isPy:p.isPy});
+        daySells.push({price:pr,notional:Math.round(cn),pnl:Math.round(pnl),hold:h,entryPrice:p.price,entryDate:p.date});
+      } else rem.push(p);
+    }
+    pos=rem;
+
+    e=cash+pos.reduce((s,p)=>s+p.mg+(p.u*pr-p.not),0);
+    if(e>peakEq)peakEq=e;
+    const dd=peakEq>0?(peakEq-e)/peakEq:0;
+    maxDD=Math.max(maxDD,dd);maxDDA=Math.max(maxDDA,peakEq-e);
+    eq.push(Math.max(0,Math.round(e)));ddP.push(-(dd*100));ddA.push(-Math.round(peakEq-e));
     const pv2=eq[d-1]||capital0;if(pv2>0)rets.push((eq[d]-pv2)/pv2);
     const cm=Math.floor(d/21);if(cm!==lastM){const r=(eq[d]-mStart)/mStart*100;mRet.push({ret:parseFloat(r.toFixed(2)),date:dt.slice(0,7)});mStart=eq[d];lastM=cm;}
+
+    // Tages-Snapshot
+    if(collectLog){
+      const openSnap=pos.map(p=>({entryDate:p.date,entryPrice:p.price,notional:p.not,margin:p.mg,units:p.u,curVal:Math.round(p.u*pr),pnl:Math.round(p.u*pr-p.not),pnlPct:((p.u*pr-p.not)/p.not*100).toFixed(1),isPy:p.isPy}));
+      daySnaps.push({date:dt,price:pr,idxATH:ih[d],idxDD:parseFloat((idxDD*100).toFixed(2)),accDD:parseFloat((dd*100).toFixed(2)),cash:Math.round(cash),openPos:openSnap,depotVal:Math.round(e),buys:dayBuys,sells:daySells,finCost:Math.round(fc*100)/100,bkActive,bMul:parseFloat(bMul.toFixed(2)),posCount:pos.length});
+    }
   }
   const finalEq=eq[eq.length-1]||0,avgH=closed>0?Math.round(sumH/closed):0;
   const meanR=rets.length?rets.reduce((a,b)=>a+b,0)/rets.length:0;
   const stdR=rets.length>1?Math.sqrt(rets.reduce((s,r)=>s+(r-meanR)**2,0)/(rets.length-1)):1;
   const sharpe=stdR>0?(meanR/stdR)*Math.sqrt(252):0;
-  return{equity:eq,ddPctArr:ddP,ddAbsArr:ddA,finalEq,closed,maxDD,maxDDAbs:maxDDA,totalFin:totFin,marginCalls:mCalls,avgHold:avgH,pyramidCount:pyCount,holdDist:hDist,monthlyRet:mRet,log,positions:pos,marginCallOccurred:mcOcc,sharpe};
+  return{equity:eq,ddPctArr:ddP,ddAbsArr:ddA,finalEq,closed,maxDD,maxDDAbs:maxDDA,totalFin:totFin,marginCalls:mCalls,avgHold:avgH,pyramidCount:pyCount,holdDist:hDist,monthlyRet:mRet,log,positions:pos,marginCallOccurred:mcOcc,sharpe,daySnaps};
 }
 
-// ── Charts ──
+// ── Charts + Tab-Switching ──
 const charts={};
 function mkC(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
 const BASE={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},elements:{point:{radius:0}}};
-function showTab(t){['equity','drawdown','monthly','histo','heatmap'].forEach(id=>$('tab-'+id).style.display=id===t?'':'none');document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['equity','drawdown','monthly','histo','heatmap'][i]===t));}
+const TABS=['equity','drawdown','monthly','histo','heatmap','daily'];
+function showTab(t){
+  TABS.forEach(id=>$('tab-'+id).style.display=id===t?'':'none');
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',TABS[i]===t));
+}
+
+// ── Tagesansicht rendern ──
+let allDaySnaps=[];
+function renderDayTable(filter=''){
+  const snaps=filter?allDaySnaps.filter(s=>s.date.includes(filter)):allDaySnaps;
+  $('dayCount').textContent=`${snaps.length} Tage angezeigt`;
+  const tb=$('dayBody');tb.innerHTML='';
+  if(!snaps.length){tb.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--muted2);padding:16px">Keine Tage gefunden</td></tr>';return;}
+  snaps.forEach((s,idx)=>{
+    const prev=idx>0?snaps[idx-1]:null;
+    const dayChg=prev?((s.price-prev.price)/prev.price*100).toFixed(2):0;
+    const dcCls=parseFloat(dayChg)>=0?'pos':'neg';
+    const ddCls=s.idxDD>10?'neg':s.idxDD>5?'warn':'';
+    const accDDcls=s.accDD>15?'neg':s.accDD>8?'warn':'';
+    // Käufe & Verkäufe
+    let trades='';
+    s.buys.forEach(b=>{trades+=`<span class="tag tb" style="margin-right:3px;margin-bottom:2px">${b.isPy?'Pyr':'Kauf'} €${fmt(b.notional)} (Mgn €${fmt(b.margin)})</span>`;});
+    s.sells.forEach(v=>{trades+=`<span class="tag tg" style="margin-right:3px;margin-bottom:2px">Verkauf €${fmt(v.notional)} P&L <b class="pos">+€${fmt(v.pnl)}</b> ${v.hold}d (Einstieg ${v.entryDate} @€${v.entryPrice.toFixed(1)})</span>`;});
+    if(s.bkActive) trades+=`<span class="tag" style="background:var(--red-bg);color:var(--red);margin-right:3px">⛔ Circuit Breaker aktiv</span>`;
+    if(!trades) trades=`<span style="color:var(--muted2)">kein Trade</span>`;
+    const rowBg=s.sells.length>0?'background:rgba(0,168,84,.04)':s.buys.length&&s.buys[0].isPy?'background:rgba(124,58,237,.04)':'';
+    tb.innerHTML+=`<tr style="${rowBg}">
+      <td class="mono" style="font-weight:600">${s.date}</td>
+      <td class="mono">€${s.price.toFixed(1)}</td>
+      <td class="mono ${dcCls}">${dayChg>=0?'+':''}${dayChg}%</td>
+      <td class="mono ${ddCls}">${s.idxDD}%</td>
+      <td class="mono ${accDDcls}">${s.accDD}%</td>
+      <td class="mono" style="font-weight:600">${fmtE(s.depotVal)}</td>
+      <td class="mono">${fmtE(s.cash)}</td>
+      <td class="mono" style="text-align:center">${s.posCount}</td>
+      <td class="mono" style="color:var(--muted)">€${s.finCost.toFixed(2)}</td>
+      <td class="mono ${s.bMul<1?'neg':s.bMul>1?'pos':''}">${s.bMul}×</td>
+      <td style="min-width:200px;flex-wrap:wrap">${trades}</td>
+    </tr>`;
+  });
+}
+$('daySearch').addEventListener('input',e=>renderDayTable(e.target.value.trim()));
 
 // ── Run ──
 function run(){
@@ -576,6 +701,11 @@ function run(){
   mkC('chartMonthly',{type:'bar',data:{labels:ml,datasets:[{data:md,backgroundColor:md.map(v=>v>=0?'rgba(0,168,84,.65)':'rgba(217,48,37,.65)'),borderRadius:3}]},options:{...BASE,scales:{x:{ticks:{maxTicksLimit:30,color:'#7a8898',font:{size:9}},grid:{display:false}},y:{ticks:{callback:v=>v.toFixed(0)+'%',color:'#7a8898',font:{size:10}},grid:{color:'rgba(0,0,0,.04)'}}}}});
   mkC('chartHisto',{type:'bar',data:{labels:Array.from({length:31},(_,i)=>i<30?i+'d':'30+'),datasets:[{data:res.holdDist,backgroundColor:'rgba(26,106,255,.55)',borderRadius:3}]},options:{...BASE,scales:{x:{ticks:{color:'#7a8898',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#7a8898',font:{size:10}},grid:{color:'rgba(0,0,0,.04)'}}}}});
   buildHeatmap(p);
+  // Tagesansicht befüllen
+  allDaySnaps=res.daySnaps||[];
+  $('daySearch').value='';
+  renderDayTable('');
+  $('dayCount').textContent=`${allDaySnaps.length} Tage total`;
   // Positions
   const pb=$('posBody');pb.innerHTML='';const fp=simPrices[N-1];
   if(!res.positions.length)pb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted2);padding:14px">Alle Positionen geschlossen</td></tr>';
