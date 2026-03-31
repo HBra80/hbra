@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>WeightLog</title>
+<title>WeightLog v1.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -241,7 +241,15 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
   font-size:10px;color:var(--muted);margin-top:5px;
 }
 
-/* ── EMPTY STATE ── */
+/* ── EXPAND BTN ── */
+.expand-btn{
+  width:100%;margin-top:10px;padding:9px;
+  background:var(--card2);border:1px dashed var(--border);
+  border-radius:var(--r2);color:var(--muted);font-size:12px;
+  cursor:pointer;font-family:var(--sans);font-weight:500;
+  transition:all .2s;letter-spacing:.03em;
+}
+.expand-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,241,53,.04)}
 .empty{
   text-align:center;padding:32px 16px;
   color:var(--muted);font-size:13px;
@@ -318,7 +326,7 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 
 <!-- HEADER -->
 <div class="header">
-  <div class="header-logo">WeightLog</div>
+  <div class="header-logo">WeightLog <span style="font-size:11px;opacity:.4;font-family:var(--mono);letter-spacing:.04em">v1.2</span></div>
   <div class="sync-dot" id="syncDot" title="Sync Status"></div>
 </div>
 
@@ -345,6 +353,7 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
+const APP_VERSION = '1.2';
 const SB_URL = 'https://cltfjarsnvpxgzlirtiv.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdGZqYXJzbnZweGd6bGlydGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzg1ODQsImV4cCI6MjA4ODkxNDU4NH0.kXs7tW9DcDSThW3NbK9MsMH5FfHs65ZCNBxS-cvI7bk';
 
@@ -363,6 +372,7 @@ let chartInst  = null;
 let chartRange = 30; // days to show in chart
 let selectedDate = todayStr();
 let activeTab  = 'log'; // 'log' | 'chart' | 'settings'
+let logExpanded = false;
 
 // ─── DB HELPERS ──────────────────────────────────────────────────────────────
 async function sbFetch(path, opts={}) {
@@ -662,24 +672,42 @@ function renderLogTab(entries, goal, latest, avg7, progressPct, diffToGoal, prof
 
     <!-- LOG LIST -->
     <div class="card">
-      <div class="card-title">Letzte Einträge</div>
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span>Letzte Einträge</span>
+        <span style="font-size:9px;color:var(--muted2);letter-spacing:.06em">v${APP_VERSION}</span>
+      </div>
       ${entries.length===0 ? `<div class="empty"><div class="empty-icon">⚖️</div>Noch keine Einträge</div>` : `
-      <div class="log-list">
-        ${[...entries].reverse().slice(0,20).map((e,i,arr)=>{
-          const prev = arr[i+1];
-          const diff = prev ? (e.weight - prev.weight) : null;
-          const avg = get7DayAvg(entries, e.date);
-          return `
-          <div class="log-item ${e.date===today?'today':''}">
-            <div class="log-date">${fmtDate(e.date)}</div>
-            <div class="log-weight">${e.weight.toFixed(1)} kg</div>
-            ${diff!==null ? `<div class="log-diff ${diff>0?'pos':'neg'}">${diff>0?'+':''}${diff.toFixed(1)}</div>` : '<div></div>'}
-            ${avg ? `<div class="log-avg">Ø${avg.toFixed(1)}</div>` : '<div></div>'}
-            <div class="log-note">${e.note||''}</div>
-            <button class="log-del" onclick="onDelete('${e.date}')" title="Löschen">×</button>
-          </div>`;
-        }).join('')}
-      </div>`}
+      <div class="log-list" id="logList">
+        ${(()=>{
+          const sorted = [...entries].reverse(); // newest first
+          const visible = logExpanded ? sorted : sorted.slice(0,10);
+          return visible.map((e,i,arr)=>{
+            // prev in time = next in this reversed array
+            const prev = arr[i+1];
+            const diff = prev ? (e.weight - prev.weight) : null;
+            const avg = get7DayAvg(entries, e.date);
+            const diffStr = diff!==null && Math.abs(diff)>=0.05
+              ? `<div class="log-diff ${diff>0?'pos':'neg'}">${diff>0?'+':''}${diff.toFixed(1)}</div>`
+              : '<div style="width:36px"></div>';
+            return `
+            <div class="log-item ${e.date===today?'today':''}">
+              <div class="log-date">${fmtDate(e.date)}</div>
+              <div class="log-weight">${e.weight.toFixed(1)} kg</div>
+              ${diffStr}
+              ${avg ? `<div class="log-avg">Ø${avg.toFixed(1)}</div>` : '<div class="log-avg"></div>'}
+              <div class="log-note">${e.note||''}</div>
+              <button class="log-del" onclick="onDelete('${e.date}')" title="Löschen">×</button>
+            </div>`;
+          }).join('');
+        })()}
+      </div>
+      ${entries.length>10 ? `
+        <button class="expand-btn" onclick="logExpanded=!logExpanded;render()">
+          ${logExpanded
+            ? `▲ Weniger anzeigen`
+            : `▼ Alle ${entries.length} Einträge anzeigen`}
+        </button>` : ''}
+      `}
     </div>
   `;
 }
