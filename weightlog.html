@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>WeightLog v1.3</title>
+<title>WeightLog v1.4</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -329,7 +329,7 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 <!-- HEADER -->
 <div class="header">
   <div class="header-logo">WeightLog</div>
-  <span style="font-family:var(--mono);font-size:10px;color:var(--muted2);letter-spacing:.06em">v1.3</span>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--muted2);letter-spacing:.06em">v1.4</span>
   <div class="sync-dot" id="syncDot" title="Sync Status"></div>
 </div>
 
@@ -356,7 +356,7 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 const SB_URL = 'https://cltfjarsnvpxgzlirtiv.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdGZqYXJzbnZweGd6bGlydGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzg1ODQsImV4cCI6MjA4ODkxNDU4NH0.kXs7tW9DcDSThW3NbK9MsMH5FfHs65ZCNBxS-cvI7bk';
 
@@ -624,40 +624,111 @@ function daysUntil(dateStr) {
 }
 
 // ─── MOTIVATIONAL MESSAGES ────────────────────────────────────────────────────
-function getMotivation(diff, diffToGoal) {
-  // diff = change vs previous entry (null if first), diffToGoal = kg remaining to target (null if no goal)
-  const hasGoal = diffToGoal !== null;
-  const onTrack = hasGoal && diffToGoal <= 0; // already at or past goal
-  const nearGoal = hasGoal && Math.abs(diffToGoal) < 1;
+function getMotivation(diff, diffToGoal, date, entryIndex) {
+  // diff         = change vs previous weigh-in (null if first entry)
+  // diffToGoal   = current - target (positive = still above goal for loss)
+  // date         = entry date string (for seeding)
+  // entryIndex   = position in list (for variety)
+  const isLossGoal = diffToGoal !== null; // we always assume loss goal in this app
+  const d = parseFloat(diffToGoal) || 0;
+  const remaining = d; // positive = still above target = needs to lose more
 
-  const lost = diff !== null && diff < -0.05;
-  const gained = diff !== null && diff > 0.05;
-  const stable = diff !== null && Math.abs(diff) < 0.05;
+  const lost      = diff !== null && diff < -0.05;
+  const gained    = diff !== null && diff > 0.05;
+  const stable    = diff !== null && Math.abs(diff) <= 0.05;
+  const isFirst   = diff === null;
+  const goalDone  = isLossGoal && remaining <= 0;
+  const nearGoal  = isLossGoal && remaining > 0 && remaining < 1.5;
+  const onTrack   = isLossGoal && lost;
 
-  // pools by situation
-  const msgs = {
-    lost_ontrack:   ['🔥 Auf Kurs — weiter so!', '📉 Perfekt! Der Trend stimmt.', '💪 Starke Leistung!', '✨ Du machst das großartig!', '🎯 Genau nach Plan!'],
-    lost_offtrack:  ['👍 Gut gemacht, weiter!', '📉 Jeder Schritt zählt!', '💚 Bewegung in die richtige Richtung!', '🌱 Langsam aber sicher!'],
-    gained_neargoal:['😌 Kleine Schwankung — normal!', '🧘 Nicht stressen, Trend zählt!', '💧 Vielleicht Wasserretention?', '📊 Der 7-Tage-Schnitt ist wichtiger!'],
-    gained:         ['😌 Nur eine Schwankung, nicht aufgeben!', '🧘 Kurzzeitig — der Trend zählt!', '💧 Kann auch Wasser sein!', '📊 Schau auf den Wochenschnitt!', '🔄 Morgen wieder!'],
-    stable_ontrack: ['🎯 Konstant — prima!', '⚖️ Stabil — gut gehalten!', '✅ Alles im grünen Bereich!'],
-    stable:         ['⚖️ Gleichgewicht gehalten!', '📊 Konsistenz ist der Schlüssel!', '🙂 Steady — weiter so!'],
-    first:          ['🚀 Der erste Schritt ist getan!', '🌟 Willkommen auf dem Weg zum Ziel!', '💫 Jede Reise beginnt mit dem ersten Schritt!'],
-    goal_reached:   ['🏆 Ziel erreicht — fantastisch!', '🎉 Du hast es geschafft!', '⭐ Unglaubliche Leistung!'],
-  };
+  // Seed from date + index so same entry always shows same message, but different entries differ
+  const seed = date ? parseInt(date.replace(/-/g,'')) + entryIndex : entryIndex;
+  const pick = (arr) => arr[seed % arr.length];
 
-  let pool;
-  if (diff === null) pool = msgs.first;
-  else if (onTrack && !gained) pool = msgs.goal_reached;
-  else if (lost && hasGoal) pool = msgs.lost_ontrack;
-  else if (lost) pool = msgs.lost_offtrack;
-  else if (gained && nearGoal) pool = msgs.gained_neargoal;
-  else if (gained) pool = msgs.gained;
-  else if (stable && hasGoal && diffToGoal <= 0.5) pool = msgs.stable_ontrack;
-  else pool = msgs.stable;
+  if (isFirst) return pick([
+    '🚀 Der erste Schritt ist gemacht — willkommen!',
+    '🌟 Jede große Reise beginnt mit einem Schritt.',
+    '💫 Heute startest du — das zählt!',
+    '📋 Gut aufgezeichnet — der Trend beginnt hier.',
+    '🎯 Tracking ist der halbe Erfolg!',
+  ]);
 
-  // deterministic pick based on day so it doesn't flicker on re-render
-  return pool[0]; // always first of chosen pool — varied enough by pool selection
+  if (goalDone) return pick([
+    '🏆 Ziel erreicht — jetzt halten und weiter aufbauen!',
+    '🎉 Unglaublich — du hast es durchgezogen!',
+    '⭐ Ziel erreicht! Jetzt den Muskelaufbau fokussieren.',
+    '💪 Fett weg, Muskeln kommen — fantastische Arbeit!',
+    '🥇 Zielgewicht erreicht. Zeit für neue Ziele!',
+  ]);
+
+  if (nearGoal && lost) return pick([
+    '🔥 Fast da — nur noch wenige Hundert Gramm!',
+    '🎯 Die Ziellinie ist in Sicht — nicht nachlassen!',
+    '💪 Endspurt! Du hast das mehr als verdient.',
+    '✨ So nah am Ziel — weiter so!',
+    '📉 Letzter Kilometer — du schaffst das!',
+  ]);
+
+  if (nearGoal && gained) return pick([
+    '😌 Winzige Schwankung kurz vor dem Ziel — völlig normal.',
+    '🧘 Nicht nervös werden — du bist fast da.',
+    '💧 Wasserretention spielt oft vor dem Ziel Streiche.',
+    '📊 Der 7-Tage-Schnitt ist wichtiger als ein einzelner Tag.',
+    '🌊 Kurze Welle — danach wieder glatt.',
+  ]);
+
+  if (lost && onTrack) return pick([
+    '📉 Sauber abgenommen — der Trend stimmt!',
+    '🔥 Fettabbau in Gang — weiter so!',
+    '💪 Muskeln bleiben, Fett geht — perfekt!',
+    '✅ Genau nach Plan — Kaloriendefizit wirkt.',
+    '🎯 Auf Kurs! Protein hoch, weiter trainieren.',
+    '⚡ Starke Leistung — der Körper reagiert!',
+    '🌱 Stetiger Fortschritt ist nachhaltiger Fortschritt.',
+    '📊 Trend zeigt klar nach unten — Klasse!',
+    '🏋️ Weniger Körperfett, mehr Kraft — das Ziel!',
+    '✨ Schritt für Schritt — du bist auf dem richtigen Weg.',
+  ]);
+
+  if (lost && !isLossGoal) return pick([
+    '👍 Abgenommen — behalte die Energie!',
+    '📉 Gute Entwicklung — weiter so!',
+    '💚 Jeder Schritt nach unten zählt!',
+    '🌱 Langsam aber nachhaltig — kluge Strategie.',
+  ]);
+
+  if (gained && nearGoal) return pick([
+    '😌 Kurze Delle kurz vor dem Ziel — ganz normal.',
+    '🧘 Nicht hetzen — nachhaltig ist besser als schnell.',
+    '💧 Kann Wassereinlagerung nach dem Training sein.',
+    '📊 Schau auf den Wochenschnitt, nicht den Tageswert.',
+  ]);
+
+  if (gained) return pick([
+    '😌 Eine Schwankung — kein Rückschritt. Weiter!',
+    '🧘 Gewicht schwankt täglich um bis zu 2 kg — normal.',
+    '💧 Mehr Kohlenhydrate oder Salz? Geht wieder runter.',
+    '📊 Der 7-Tage-Schnitt zeigt den echten Trend.',
+    '🔄 Morgen neuer Versuch — du hast das drauf!',
+    '⚖️ Kurzfristig hoch, langfristig runter — Geduld!',
+    '🏋️ Muskelaufbau kann das Gewicht kurz erhöhen — gut!',
+    '🌊 Kleine Wellen — die Richtung stimmt trotzdem.',
+    '💪 Nicht der Tageswert zählt, sondern der Wochenschnitt.',
+    '🍽️ Manchmal liegt es am letzten Abendessen — kein Stress.',
+  ]);
+
+  if (stable) return pick([
+    '⚖️ Stabiles Gewicht — Muskeln können trotzdem wachsen!',
+    '📊 Konstant ist gut — Körperzusammensetzung verändert sich.',
+    '🧘 Haltephase — manchmal notwendig vor dem nächsten Drop.',
+    '💪 Gleichgewicht: Fett ab, Muskel drauf — Waage täuscht!',
+    '✅ Konsistenz ist der Schlüssel zum Erfolg.',
+    '🌱 Stagnation ist oft Vorbereitung auf den nächsten Schritt.',
+    '🏋️ Körperfett kann sinken auch wenn die Waage gleich bleibt.',
+    '🎯 Steady State — trainiere weiter, der Körper passt sich an.',
+  ]);
+
+  return '💪 Weiter so!';
 }
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
@@ -673,13 +744,33 @@ function render() {
   const todayEntry = entries.find(e=>e.date===todayStr());
   const avg7 = latest ? get7DayAvg(entries, latest.date) : null;
 
-  // Progress
+  // Progress — for weight LOSS: start > target, so totalChange is negative
   let progressPct = 0, diffToGoal = null;
   if (goal.target && goal.start_weight && latest) {
-    const totalChange = goal.target - goal.start_weight;
-    const actualChange = latest.weight - goal.start_weight;
-    progressPct = totalChange !== 0 ? Math.min(100, Math.max(0, (actualChange/totalChange)*100)) : 0;
-    diffToGoal = (latest.weight - goal.target).toFixed(1);
+    const startW = parseFloat(goal.start_weight);
+    const targetW = parseFloat(goal.target);
+    const totalChange = targetW - startW; // negative for weight loss
+    const actualChange = latest.weight - startW;
+    // For loss: actualChange negative is progress. pct = actualChange/totalChange (both negative → positive)
+    progressPct = totalChange !== 0
+      ? Math.min(100, Math.max(0, (actualChange / totalChange) * 100))
+      : 0;
+    // diffToGoal: positive = still above target (needs to lose more), negative = below target (overshot)
+    // For weight loss: IST > SOLL → still needs to lose → show as negative (need to go down)
+    const rawDiff = latest.weight - targetW;
+    diffToGoal = rawDiff.toFixed(1); // positive means above goal (bad for loss), negative means below (good)
+  }
+
+  // Zum Ziel display
+  let zielDisplay = '—', zielColor = '';
+  if (diffToGoal !== null && goal.target && goal.start_weight) {
+    const d = parseFloat(diffToGoal); // positive = current above target
+    const isLossGoal = parseFloat(goal.target) < parseFloat(goal.start_weight);
+    // "remaining" = how far still to go (positive = still needs work)
+    const remaining = isLossGoal ? d : -d; // loss: d>0 means still above = needs work
+    zielDisplay = (remaining > 0 ? '-' : '+') + Math.abs(remaining).toFixed(1);
+    // red = still needs work, green = already past goal
+    zielColor = remaining > 0.05 ? 'red' : 'green';
   }
 
   content.innerHTML = `
@@ -720,17 +811,17 @@ function renderLogTab(entries, goal, latest, avg7, progressPct, diffToGoal, prof
         </div>
         <div class="stat">
           <div class="stat-label">Zum Ziel</div>
-          <div class="stat-val ${diffToGoal!==null ? (parseFloat(diffToGoal)>0?'red':'green') : ''}">${diffToGoal !== null ? (parseFloat(diffToGoal)>0?'+':'')+diffToGoal : '—'}</div>
+          <div class="stat-val ${zielColor}">${zielDisplay}</div>
           <div class="stat-sub">kg</div>
         </div>
       </div>
       ${goal.target && goal.start_weight ? `
       <div class="progress-wrap">
-        <div class="progress-bar"><div class="progress-fill" style="width:${progressPct}%"></div></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${progressPct.toFixed(0)}%"></div></div>
         <div class="progress-label">
-          <span>${goal.start_weight} kg</span>
+          <span>${parseFloat(goal.start_weight) > parseFloat(goal.target) ? goal.start_weight+' kg' : goal.target+' kg'}</span>
           <span>${progressPct.toFixed(0)}%</span>
-          <span>${goal.target} kg</span>
+          <span>${parseFloat(goal.start_weight) > parseFloat(goal.target) ? goal.target+' kg' : goal.start_weight+' kg'}</span>
         </div>
       </div>` : ''}
     </div>
@@ -785,12 +876,13 @@ function renderLogTab(entries, goal, latest, avg7, progressPct, diffToGoal, prof
             const diff = prev ? (e.weight - prev.weight) : null;
             const avg = get7DayAvg(entries, e.date);
             const targetW = getTargetWeightForDate(goal, e.date);
-            const diffToGoal = (goal.target && targetW!==null) ? e.weight - targetW : null;
+            // diffToGoal for motivation: current - target (positive = above target = still needs to lose)
+            const diffToGoalEntry = (goal.target && targetW !== null) ? (e.weight - targetW) : null;
 
             const diffStr = diff!==null && Math.abs(diff)>=0.05
               ? `<span class="log-diff ${diff>0?'pos':'neg'}">${diff>0?'+':''}${diff.toFixed(1)}</span>`
               : '';
-            const motivation = getMotivation(diff, diffToGoal);
+            const motivation = getMotivation(diff, diffToGoalEntry, e.date, i);
             return `
             <div class="log-item ${e.date===today?'today':''}">
               <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
