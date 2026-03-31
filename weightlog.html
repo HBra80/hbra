@@ -781,7 +781,7 @@ function render() {
       <button class="tab ${activeTab==='settings'?'active':''}" onclick="setTab('settings')">EINSTELLUNGEN</button>
     </div>
 
-    ${activeTab==='log' ? renderLogTab(entries, goal, latest, avg7, progressPct, diffToGoal, prof) : ''}
+    ${activeTab==='log' ? renderLogTab(entries, goal, latest, avg7, progressPct, diffToGoal, prof, zielDisplay, zielColor) : ''}
     ${activeTab==='chart' ? renderChartTab(entries, goal) : ''}
     ${activeTab==='settings' ? renderSettingsTab(goal, prof) : ''}
   `;
@@ -789,7 +789,7 @@ function render() {
   if (activeTab==='chart') initChart(entries, goal);
 }
 
-function renderLogTab(entries, goal, latest, avg7, progressPct, diffToGoal, prof) {
+function renderLogTab(entries, goal, latest, avg7, progressPct, diffToGoal, prof, zielDisplay='—', zielColor='') {
   const today = todayStr();
   const todayEntry = entries.find(e=>e.date===today);
   const selEntry = entries.find(e=>e.date===selectedDate);
