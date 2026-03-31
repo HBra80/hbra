@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>WeightLog v1.2</title>
+<title>WeightLog v1.3</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -64,14 +64,16 @@ body{
 /* ── PROFILE SWITCHER ── */
 .profile-bar{
   display:flex;gap:8px;padding:14px 16px 0;
+  overflow-x:auto;scrollbar-width:none;
 }
+.profile-bar::-webkit-scrollbar{display:none}
 .profile-btn{
-  flex:1;padding:10px 12px;
+  flex:0 0 auto;padding:10px 14px;
   border:1.5px solid var(--border);
   border-radius:var(--r2);background:var(--card);
   color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:500;
   cursor:pointer;transition:all .2s;
-  display:flex;align-items:center;gap:8px;
+  display:flex;align-items:center;gap:8px;white-space:nowrap;
 }
 .profile-btn.active{
   border-color:var(--accent);color:var(--text);
@@ -326,7 +328,8 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 
 <!-- HEADER -->
 <div class="header">
-  <div class="header-logo">WeightLog <span style="font-size:11px;opacity:.4;font-family:var(--mono);letter-spacing:.04em">v1.2</span></div>
+  <div class="header-logo">WeightLog</div>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--muted2);letter-spacing:.06em">v1.3</span>
   <div class="sync-dot" id="syncDot" title="Sync Status"></div>
 </div>
 
@@ -353,7 +356,7 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 const SB_URL = 'https://cltfjarsnvpxgzlirtiv.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdGZqYXJzbnZweGd6bGlydGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzg1ODQsImV4cCI6MjA4ODkxNDU4NH0.kXs7tW9DcDSThW3NbK9MsMH5FfHs65ZCNBxS-cvI7bk';
 
@@ -412,9 +415,11 @@ async function loadAll() {
   try {
     // Load weight entries for all profiles
     const rows = await sbFetch('weight_entries?order=date.asc&select=*');
-    allData = { p1:[], p2:[] };
+    allData = {};
+    profiles.forEach(p => allData[p.id] = []);
     for (const r of rows) {
-      if (allData[r.profile_id]) allData[r.profile_id].push(r);
+      if (!allData[r.profile_id]) allData[r.profile_id] = [];
+      allData[r.profile_id].push(r);
     }
 
     // Load goals/settings for all profiles
@@ -422,20 +427,35 @@ async function loadAll() {
     goals = {};
     for (const g of gRows) goals[g.profile_id] = g;
 
-    // Load profile names from settings
+    // Load profile names + list from settings
     const pRows = await sbFetch('settings?key=like.wl_profile_*&select=key,value');
     for (const r of pRows) {
-      const pid = r.key.replace('wl_profile_','');
-      const saved = JSON.parse(r.value);
-      const pr = profiles.find(p=>p.id===pid);
-      if (pr) Object.assign(pr, saved);
+      if (r.key === 'wl_profile_list') {
+        // Restore dynamic profile list
+        try {
+          const savedList = JSON.parse(r.value);
+          if (Array.isArray(savedList) && savedList.length) {
+            profiles = savedList;
+            localStorage.setItem('wl_profiles', JSON.stringify(profiles));
+          }
+        } catch(e) {}
+      } else {
+        const pid = r.key.replace('wl_profile_','');
+        try {
+          const saved = JSON.parse(r.value);
+          const pr = profiles.find(p=>p.id===pid);
+          if (pr) Object.assign(pr, saved);
+        } catch(e) {}
+      }
     }
+    // ensure allData has keys for all profiles
+    profiles.forEach(p => { if (!allData[p.id]) allData[p.id] = []; });
+    if (!activeId || !profiles.find(p=>p.id===activeId)) activeId = profiles[0].id;
     localStorage.setItem('wl_profiles', JSON.stringify(profiles));
 
     setSyncStatus('ok');
     render();
   } catch(e) {
-    // Try rendering with whatever local data we have
     render();
   }
 }
@@ -443,7 +463,9 @@ async function loadAll() {
 // ─── SAVE WEIGHT ENTRY ────────────────────────────────────────────────────────
 async function saveEntry(date, weight, note='') {
   const pid = activeId;
-  const id = parseInt((pid==='p1'?'1':'2') + date.replace(/-/g,''));
+  // Generate stable numeric ID from profile index + date
+  const pidx = profiles.findIndex(p=>p.id===pid);
+  const id = parseInt(String(pidx+1) + date.replace(/-/g,''));
 
   // Check if entry already exists for this date
   const arr = allData[pid] || [];
@@ -485,7 +507,8 @@ async function doSaveEntry(id, pid, date, weight, note, arr) {
 // ─── DELETE ENTRY ─────────────────────────────────────────────────────────────
 async function deleteEntry(date) {
   const pid = activeId;
-  const id = parseInt((pid==='p1'?'1':'2') + date.replace(/-/g,''));
+  const pidx = profiles.findIndex(p=>p.id===pid);
+  const id = parseInt(String(pidx+1) + date.replace(/-/g,''));
   await sbFetch(`weight_entries?id=eq.${id}`, {
     method:'DELETE', headers:{ 'Prefer':'' }
   });
@@ -514,14 +537,53 @@ async function saveProfile(pid, name, emoji) {
   const pr = profiles.find(p=>p.id===pid);
   if (pr) { pr.name=name; pr.emoji=emoji; }
   localStorage.setItem('wl_profiles', JSON.stringify(profiles));
+  await saveProfileList();
+  render();
+  showToast('✓ Profil gespeichert');
+}
 
+async function addProfile() {
+  const newId = 'p' + Date.now();
+  const colors = ['#c8f135','#4d8dff','#ff9f43','#7ee8a2','#a78bfa','#ff5f5f'];
+  const emojis = ['🧑','👤','🙋','🏃','💪','🌟'];
+  const idx = profiles.length % colors.length;
+  profiles.push({ id:newId, name:`Person ${profiles.length+1}`, emoji:emojis[idx], color:colors[idx] });
+  allData[newId] = [];
+  localStorage.setItem('wl_profiles', JSON.stringify(profiles));
+  await saveProfileList();
+  activeId = newId;
+  render();
+  showToast('✓ Neue Person hinzugefügt');
+}
+
+async function removeProfile(pid) {
+  if (profiles.length <= 1) { showToast('⚠ Mindestens 1 Profil erforderlich'); return; }
+  const name = profiles.find(p=>p.id===pid)?.name || pid;
+  openModal('Profil löschen?', `
+    <div style="color:var(--muted);font-size:13px;line-height:1.6">
+      Profil <b style="color:var(--text)">${name}</b> wirklich löschen?<br>
+      <span style="color:var(--red);font-size:12px">Alle Gewichtseinträge dieses Profils werden ebenfalls gelöscht.</span>
+    </div>
+  `, async () => {
+    // Delete all entries for this profile from DB
+    await sbFetch(`weight_entries?profile_id=eq.${pid}`, { method:'DELETE', headers:{'Prefer':''} });
+    await sbFetch(`weight_goals?profile_id=eq.${pid}`, { method:'DELETE', headers:{'Prefer':''} });
+    profiles = profiles.filter(p=>p.id!==pid);
+    delete allData[pid];
+    if (activeId === pid) activeId = profiles[0].id;
+    localStorage.setItem('wl_profiles', JSON.stringify(profiles));
+    await saveProfileList();
+    render();
+    showToast('Profil gelöscht');
+  });
+}
+
+async function saveProfileList() {
   await sbFetch('settings', {
     method:'POST',
     headers:{ 'Prefer':'resolution=merge-duplicates,return=representation' },
-    body: JSON.stringify({ key:`wl_profile_${pid}`, value: JSON.stringify({name,emoji}) })
+    body: JSON.stringify({ key:'wl_profile_list', value: JSON.stringify(profiles) })
   });
-  render();
-  showToast('✓ Profil gespeichert');
 }
 
 // ─── CALCULATIONS ─────────────────────────────────────────────────────────────
@@ -559,6 +621,43 @@ function fmtDate(dateStr) {
 function daysUntil(dateStr) {
   const d = new Date(dateStr+'T00:00:00') - new Date();
   return Math.ceil(d / 86400000);
+}
+
+// ─── MOTIVATIONAL MESSAGES ────────────────────────────────────────────────────
+function getMotivation(diff, diffToGoal) {
+  // diff = change vs previous entry (null if first), diffToGoal = kg remaining to target (null if no goal)
+  const hasGoal = diffToGoal !== null;
+  const onTrack = hasGoal && diffToGoal <= 0; // already at or past goal
+  const nearGoal = hasGoal && Math.abs(diffToGoal) < 1;
+
+  const lost = diff !== null && diff < -0.05;
+  const gained = diff !== null && diff > 0.05;
+  const stable = diff !== null && Math.abs(diff) < 0.05;
+
+  // pools by situation
+  const msgs = {
+    lost_ontrack:   ['🔥 Auf Kurs — weiter so!', '📉 Perfekt! Der Trend stimmt.', '💪 Starke Leistung!', '✨ Du machst das großartig!', '🎯 Genau nach Plan!'],
+    lost_offtrack:  ['👍 Gut gemacht, weiter!', '📉 Jeder Schritt zählt!', '💚 Bewegung in die richtige Richtung!', '🌱 Langsam aber sicher!'],
+    gained_neargoal:['😌 Kleine Schwankung — normal!', '🧘 Nicht stressen, Trend zählt!', '💧 Vielleicht Wasserretention?', '📊 Der 7-Tage-Schnitt ist wichtiger!'],
+    gained:         ['😌 Nur eine Schwankung, nicht aufgeben!', '🧘 Kurzzeitig — der Trend zählt!', '💧 Kann auch Wasser sein!', '📊 Schau auf den Wochenschnitt!', '🔄 Morgen wieder!'],
+    stable_ontrack: ['🎯 Konstant — prima!', '⚖️ Stabil — gut gehalten!', '✅ Alles im grünen Bereich!'],
+    stable:         ['⚖️ Gleichgewicht gehalten!', '📊 Konsistenz ist der Schlüssel!', '🙂 Steady — weiter so!'],
+    first:          ['🚀 Der erste Schritt ist getan!', '🌟 Willkommen auf dem Weg zum Ziel!', '💫 Jede Reise beginnt mit dem ersten Schritt!'],
+    goal_reached:   ['🏆 Ziel erreicht — fantastisch!', '🎉 Du hast es geschafft!', '⭐ Unglaubliche Leistung!'],
+  };
+
+  let pool;
+  if (diff === null) pool = msgs.first;
+  else if (onTrack && !gained) pool = msgs.goal_reached;
+  else if (lost && hasGoal) pool = msgs.lost_ontrack;
+  else if (lost) pool = msgs.lost_offtrack;
+  else if (gained && nearGoal) pool = msgs.gained_neargoal;
+  else if (gained) pool = msgs.gained;
+  else if (stable && hasGoal && diffToGoal <= 0.5) pool = msgs.stable_ontrack;
+  else pool = msgs.stable;
+
+  // deterministic pick based on day so it doesn't flicker on re-render
+  return pool[0]; // always first of chosen pool — varied enough by pool selection
 }
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
@@ -674,28 +773,36 @@ function renderLogTab(entries, goal, latest, avg7, progressPct, diffToGoal, prof
     <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <span>Letzte Einträge</span>
-        <span style="font-size:9px;color:var(--muted2);letter-spacing:.06em">v${APP_VERSION}</span>
       </div>
       ${entries.length===0 ? `<div class="empty"><div class="empty-icon">⚖️</div>Noch keine Einträge</div>` : `
       <div class="log-list" id="logList">
         ${(()=>{
           const sorted = [...entries].reverse(); // newest first
           const visible = logExpanded ? sorted : sorted.slice(0,10);
+          const goal = goals[activeId] || {};
           return visible.map((e,i,arr)=>{
-            // prev in time = next in this reversed array
             const prev = arr[i+1];
             const diff = prev ? (e.weight - prev.weight) : null;
             const avg = get7DayAvg(entries, e.date);
+            const targetW = getTargetWeightForDate(goal, e.date);
+            const diffToGoal = (goal.target && targetW!==null) ? e.weight - targetW : null;
+
             const diffStr = diff!==null && Math.abs(diff)>=0.05
-              ? `<div class="log-diff ${diff>0?'pos':'neg'}">${diff>0?'+':''}${diff.toFixed(1)}</div>`
-              : '<div style="width:36px"></div>';
+              ? `<span class="log-diff ${diff>0?'pos':'neg'}">${diff>0?'+':''}${diff.toFixed(1)}</span>`
+              : '';
+            const motivation = getMotivation(diff, diffToGoal);
             return `
             <div class="log-item ${e.date===today?'today':''}">
-              <div class="log-date">${fmtDate(e.date)}</div>
-              <div class="log-weight">${e.weight.toFixed(1)} kg</div>
-              ${diffStr}
-              ${avg ? `<div class="log-avg">Ø${avg.toFixed(1)}</div>` : '<div class="log-avg"></div>'}
-              <div class="log-note">${e.note||''}</div>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div class="log-date">${fmtDate(e.date)}</div>
+                  <div class="log-weight">${e.weight.toFixed(1)} kg</div>
+                  ${diffStr}
+                  ${avg ? `<div class="log-avg">Ø${avg.toFixed(1)}</div>` : ''}
+                  ${e.note ? `<div class="log-note">${e.note}</div>` : ''}
+                </div>
+                <div style="font-size:11px;color:var(--muted);padding-left:2px">${motivation}</div>
+              </div>
               <button class="log-del" onclick="onDelete('${e.date}')" title="Löschen">×</button>
             </div>`;
           }).join('');
@@ -717,7 +824,7 @@ function renderChartTab(entries, goal) {
     <div class="card">
       <div class="card-title">Gewichtsverlauf</div>
       <div class="range-btns">
-        ${[14,30,90,'all'].map(r=>`
+        ${[7,14,30,90,'all'].map(r=>`
           <button class="range-btn ${chartRange===r?'active':''}" onclick="setRange(${r==='all'?'"all"':r})">${r==='all'?'Alle':(r+'T')}</button>
         `).join('')}
       </div>
@@ -779,7 +886,7 @@ function renderSettingsTab(goal, prof) {
       <div class="profile-settings">
         ${profiles.map(p=>`
           <div style="display:flex;gap:8px;align-items:flex-end">
-            <div class="field" style="flex:0 0 60px">
+            <div class="field" style="flex:0 0 56px">
               <label>Emoji</label>
               <input class="inp" type="text" id="emo_${p.id}" value="${p.emoji}"
                 style="text-align:center;font-size:18px;padding:8px 6px">
@@ -790,8 +897,10 @@ function renderSettingsTab(goal, prof) {
             </div>
             <button class="btn-save" style="margin-bottom:0;padding:11px 14px"
               onclick="saveProfile('${p.id}',document.getElementById('name_${p.id}').value,document.getElementById('emo_${p.id}').value)">OK</button>
+            ${profiles.length>1 ? `<button class="log-del" style="width:32px;height:44px;flex-shrink:0;margin-bottom:0" onclick="removeProfile('${p.id}')" title="Profil löschen">×</button>` : ''}
           </div>
         `).join('')}
+        <button class="expand-btn" style="margin-top:6px" onclick="addProfile()">＋ Neue Person hinzufügen</button>
       </div>
     </div>
   `;
@@ -875,15 +984,16 @@ function initChart(entries, goal) {
     {
       label:'Tagesgewicht',
       data: rawWeights,
-      borderColor:'rgba(200,241,53,.5)',
-      backgroundColor:'rgba(200,241,53,.15)',
+      borderColor:'rgba(200,241,53,.7)',
+      backgroundColor:'transparent',
       pointBackgroundColor:'#c8f135',
-      pointRadius: dateLabels.map(dt => entryMap[dt] !== undefined ? 3 : 0),
-      pointHoverRadius:5,
-      tension:0.3,
+      pointBorderColor:'#c8f135',
+      pointRadius: dateLabels.map(dt => entryMap[dt] !== undefined ? 4 : 0),
+      pointHoverRadius:6,
+      tension:0.2,
       borderWidth:1.5,
       fill:false,
-      spanGaps:false
+      spanGaps:true   // ← connects dots across days with no entry
     },
     {
       label:'Ø 7 Tage',
