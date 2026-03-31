@@ -48,7 +48,7 @@ body{
 }
 .header-logo{
   font-family:var(--display);
-  font-size:22px;
+  font-size:26px;
   letter-spacing:.04em;
   color:var(--accent);
   flex:1;
@@ -71,7 +71,7 @@ body{
   flex:0 0 auto;padding:10px 14px;
   border:1.5px solid var(--border);
   border-radius:var(--r2);background:var(--card);
-  color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:500;
+  color:var(--muted);font-family:var(--sans);font-size:15px;font-weight:500;
   cursor:pointer;transition:all .2s;
   display:flex;align-items:center;gap:8px;white-space:nowrap;
 }
@@ -97,7 +97,7 @@ body{
   border-radius:var(--r);padding:18px;
 }
 .card-title{
-  font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  font-size:12px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--muted);margin-bottom:14px;font-weight:500;
 }
 
@@ -108,12 +108,12 @@ body{
   border:1px solid var(--border);
   display:flex;flex-direction:column;gap:3px;
 }
-.stat-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.stat-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .stat-val{
-  font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text);
+  font-family:var(--mono);font-size:22px;font-weight:500;color:var(--text);
   line-height:1;
 }
-.stat-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.stat-sub{font-size:12px;color:var(--muted);margin-top:2px}
 .stat-val.green{color:var(--accent2)}
 .stat-val.red{color:var(--red)}
 .stat-val.accent{color:var(--accent)}
@@ -121,21 +121,21 @@ body{
 /* ── INPUT AREA ── */
 .input-row{display:flex;gap:8px;align-items:flex-end}
 .field{display:flex;flex-direction:column;gap:6px;flex:1}
-.field label{font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.04em}
+.field label{font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.04em}
 .inp{
   background:var(--card2);border:1.5px solid var(--border);
-  border-radius:var(--r2);padding:11px 13px;
-  color:var(--text);font-family:var(--mono);font-size:15px;
+  border-radius:var(--r2);padding:12px 14px;
+  color:var(--text);font-family:var(--mono);font-size:17px;
   outline:none;transition:border-color .2s;width:100%;
   -webkit-appearance:none;
 }
 .inp:focus{border-color:var(--accent)}
 .inp::placeholder{color:var(--muted2)}
-textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line-height:1.5}
+textarea.inp{resize:none;font-family:var(--sans);font-size:15px;height:66px;line-height:1.5}
 
 .btn-save{
-  padding:12px 20px;background:var(--accent);color:#0c0e14;
-  border:none;border-radius:var(--r2);font-weight:700;font-size:13px;
+  padding:13px 22px;background:var(--accent);color:#0c0e14;
+  border:none;border-radius:var(--r2);font-weight:700;font-size:15px;
   cursor:pointer;white-space:nowrap;transition:all .15s;
   font-family:var(--sans);letter-spacing:.02em;
   flex-shrink:0;
@@ -160,14 +160,14 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
   min-width:0;overflow:visible;
 }
 .date-label{
-  font-family:var(--mono);font-size:13px;color:var(--text);
+  font-family:var(--mono);font-size:16px;color:var(--text);
   cursor:pointer;padding:6px 10px;border-radius:8px;
   border:1px solid transparent;transition:all .2s;
   display:flex;align-items:center;gap:6px;white-space:nowrap;
   position:relative;z-index:1;
 }
 .date-label:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,241,53,.06)}
-.date-label .cal-icon{font-size:12px;opacity:.6}
+.date-label .cal-icon{font-size:14px;opacity:.6}
 /* hide native date input but keep it functional — only covers label, not buttons */
 .date-picker-hidden{
   position:absolute;
@@ -181,16 +181,16 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
   position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;
 }
 .today-btn{
-  padding:4px 10px;background:transparent;border:1px solid var(--muted2);
-  border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;
+  padding:5px 12px;background:transparent;border:1px solid var(--muted2);
+  border-radius:6px;color:var(--muted);font-size:13px;cursor:pointer;
   font-family:var(--sans);transition:all .2s;white-space:nowrap;flex-shrink:0;
 }
 .today-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 /* ── CHART ── */
-.chart-wrap{position:relative;height:240px}
-.chart-legend{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.chart-wrap{position:relative;height:260px}
+.chart-legend{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .legend-dot{width:8px;height:8px;border-radius:50%}
 .legend-line{width:16px;height:2px;border-radius:1px}
 
@@ -211,18 +211,18 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
   background:var(--muted2);border-radius:2px;
 }
 .log-item.today::before{background:var(--accent)}
-.log-date{font-size:11px;color:var(--muted);width:70px;flex-shrink:0}
-.log-weight{font-family:var(--mono);font-size:15px;font-weight:500}
-.log-avg{font-size:11px;color:var(--muted);font-family:var(--mono)}
-.log-note{font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-date{font-size:13px;color:var(--muted);width:76px;flex-shrink:0}
+.log-weight{font-family:var(--mono);font-size:17px;font-weight:500}
+.log-avg{font-size:13px;color:var(--muted);font-family:var(--mono)}
+.log-note{font-size:13px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .log-del{
-  width:22px;height:22px;background:transparent;border:none;
-  color:var(--muted2);cursor:pointer;font-size:14px;
+  width:24px;height:24px;background:transparent;border:none;
+  color:var(--muted2);cursor:pointer;font-size:16px;
   display:flex;align-items:center;justify-content:center;
   border-radius:4px;transition:all .2s;flex-shrink:0;
 }
 .log-del:hover{background:rgba(255,95,95,.15);color:var(--red)}
-.log-diff{font-size:10px;font-family:var(--mono)}
+.log-diff{font-size:12px;font-family:var(--mono)}
 .log-diff.pos{color:var(--red)}
 .log-diff.neg{color:var(--accent2)}
 
@@ -240,29 +240,29 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 }
 .progress-label{
   display:flex;justify-content:space-between;
-  font-size:10px;color:var(--muted);margin-top:5px;
+  font-size:12px;color:var(--muted);margin-top:5px;
 }
 
 /* ── EXPAND BTN ── */
 .expand-btn{
-  width:100%;margin-top:10px;padding:9px;
+  width:100%;margin-top:10px;padding:10px;
   background:var(--card2);border:1px dashed var(--border);
-  border-radius:var(--r2);color:var(--muted);font-size:12px;
+  border-radius:var(--r2);color:var(--muted);font-size:14px;
   cursor:pointer;font-family:var(--sans);font-weight:500;
   transition:all .2s;letter-spacing:.03em;
 }
 .expand-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,241,53,.04)}
 .empty{
   text-align:center;padding:32px 16px;
-  color:var(--muted);font-size:13px;
+  color:var(--muted);font-size:15px;
 }
-.empty-icon{font-size:32px;margin-bottom:8px;opacity:.4}
+.empty-icon{font-size:36px;margin-bottom:8px;opacity:.4}
 
 /* ── TOAST ── */
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);
   background:var(--card2);border:1px solid var(--border);border-radius:10px;
-  padding:10px 18px;font-size:13px;color:var(--text);
+  padding:11px 20px;font-size:15px;color:var(--text);
   transition:transform .3s cubic-bezier(.4,0,.2,1);
   z-index:999;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4);
 }
@@ -271,7 +271,7 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 /* ── TABS ── */
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px}
 .tab{
-  padding:8px 14px;font-size:12px;font-weight:500;letter-spacing:.04em;
+  padding:10px 16px;font-size:14px;font-weight:500;letter-spacing:.04em;
   color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;
   transition:all .2s;background:none;border-top:none;border-left:none;border-right:none;
   font-family:var(--sans);
@@ -281,8 +281,8 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 /* ── CHART RANGE ── */
 .range-btns{display:flex;gap:6px;margin-bottom:14px}
 .range-btn{
-  padding:5px 12px;background:var(--card2);border:1px solid var(--border);
-  border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;
+  padding:6px 14px;background:var(--card2);border:1px solid var(--border);
+  border-radius:6px;color:var(--muted);font-size:13px;cursor:pointer;
   font-family:var(--sans);font-weight:500;transition:all .2s;
 }
 .range-btn.active{background:rgba(200,241,53,.1);border-color:var(--accent);color:var(--accent)}
@@ -295,22 +295,22 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 .modal-backdrop.open{display:flex}
 .modal{
   background:var(--card);border:1px solid var(--border);
-  border-radius:var(--r) var(--r) 0 0;padding:20px 16px;
+  border-radius:var(--r) var(--r) 0 0;padding:22px 18px;
   width:100%;max-width:520px;margin:0 auto;
   animation:slideUp .25s ease;
 }
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.modal-title{font-size:14px;font-weight:600;margin-bottom:16px}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:16px}
 .modal-btns{display:flex;gap:8px;margin-top:14px}
 .btn-cancel{
-  flex:1;padding:11px;background:var(--card2);border:1px solid var(--border);
-  border-radius:var(--r2);color:var(--muted);font-family:var(--sans);font-size:13px;
+  flex:1;padding:12px;background:var(--card2);border:1px solid var(--border);
+  border-radius:var(--r2);color:var(--muted);font-family:var(--sans);font-size:15px;
   cursor:pointer;transition:all .2s;
 }
 .btn-cancel:hover{border-color:var(--muted);color:var(--text)}
 .btn-ok{
-  flex:1;padding:11px;background:var(--accent);border:none;
-  border-radius:var(--r2);color:#0c0e14;font-family:var(--sans);font-size:13px;
+  flex:1;padding:12px;background:var(--accent);border:none;
+  border-radius:var(--r2);color:#0c0e14;font-family:var(--sans);font-size:15px;
   font-weight:700;cursor:pointer;transition:all .15s;
 }
 .btn-ok:hover{background:#d9ff50}
@@ -329,7 +329,7 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 <!-- HEADER -->
 <div class="header">
   <div class="header-logo">WeightLog</div>
-  <span style="font-family:var(--mono);font-size:10px;color:var(--muted2);letter-spacing:.06em">v1.4</span>
+  <span style="font-family:var(--mono);font-size:12px;color:var(--muted2);letter-spacing:.06em">v1.4</span>
   <div class="sync-dot" id="syncDot" title="Sync Status"></div>
 </div>
 
@@ -893,7 +893,7 @@ function renderLogTab(entries, goal, latest, avg7, progressPct, diffToGoal, prof
                   ${avg ? `<div class="log-avg">Ø${avg.toFixed(1)}</div>` : ''}
                   ${e.note ? `<div class="log-note">${e.note}</div>` : ''}
                 </div>
-                <div style="font-size:11px;color:var(--muted);padding-left:2px">${motivation}</div>
+                <div style="font-size:13px;color:var(--muted);padding-left:2px">${motivation}</div>
               </div>
               <button class="log-del" onclick="onDelete('${e.date}')" title="Löschen">×</button>
             </div>`;
@@ -1126,7 +1126,9 @@ function initChart(entries, goal) {
           bodyColor:'#e8eaf0',
           borderColor:'#252a3a',
           borderWidth:1,
-          padding:10,
+          padding:12,
+          bodyFont:{ size:13 },
+          titleFont:{ size:12 },
           callbacks:{
             title: ctx => fmtDate(dateLabels[ctx[0].dataIndex]),
             label: ctx => {
@@ -1140,14 +1142,14 @@ function initChart(entries, goal) {
       scales:{
         x:{
           ticks:{
-            color:'#5a6178', font:{size:10},
+            color:'#5a6178', font:{size:12},
             maxRotation:0,
             callback: (val, idx) => labels[idx] || null
           },
           grid:{ color:'rgba(255,255,255,.04)' }
         },
         y:{
-          ticks:{ color:'#5a6178', font:{size:10,family:'DM Mono'}, callback:v=>v.toFixed(1) },
+          ticks:{ color:'#5a6178', font:{size:12,family:'DM Mono'}, callback:v=>v.toFixed(1) },
           grid:{ color:'rgba(255,255,255,.04)' }
         }
       }
