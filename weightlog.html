@@ -142,21 +142,46 @@ textarea.inp{resize:none;font-family:var(--sans);font-size:13px;height:60px;line
 .btn-save:active{transform:translateY(0)}
 
 /* ── DATE NAV ── */
-.date-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.date-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .date-nav-btn{
   width:32px;height:32px;background:var(--card2);
   border:1px solid var(--border);border-radius:8px;
   color:var(--muted);cursor:pointer;font-size:16px;
   display:flex;align-items:center;justify-content:center;transition:all .2s;
+  flex-shrink:0;
 }
 .date-nav-btn:hover{border-color:var(--accent);color:var(--accent)}
+.date-nav-btn:disabled{opacity:.3;cursor:default;pointer-events:none}
+.date-label-wrap{
+  flex:1;position:relative;display:flex;justify-content:center;
+  /* Ensure it doesn't grow beyond its space and overlap buttons */
+  min-width:0;overflow:visible;
+}
 .date-label{
-  flex:1;text-align:center;font-family:var(--mono);font-size:13px;color:var(--text);
+  font-family:var(--mono);font-size:13px;color:var(--text);
+  cursor:pointer;padding:6px 10px;border-radius:8px;
+  border:1px solid transparent;transition:all .2s;
+  display:flex;align-items:center;gap:6px;white-space:nowrap;
+  position:relative;z-index:1;
+}
+.date-label:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,241,53,.06)}
+.date-label .cal-icon{font-size:12px;opacity:.6}
+/* hide native date input but keep it functional — only covers label, not buttons */
+.date-picker-hidden{
+  position:absolute;
+  top:0;bottom:0;left:50%;
+  transform:translateX(-50%);
+  width:140px; /* fixed width, won't overflow onto buttons */
+  opacity:0;cursor:pointer;
+  z-index:2;
+}
+.date-picker-hidden::-webkit-calendar-picker-indicator{
+  position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;
 }
 .today-btn{
   padding:4px 10px;background:transparent;border:1px solid var(--muted2);
   border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;
-  font-family:var(--sans);transition:all .2s;
+  font-family:var(--sans);transition:all .2s;white-space:nowrap;flex-shrink:0;
 }
 .today-btn:hover{border-color:var(--accent);color:var(--accent)}
 
@@ -410,6 +435,27 @@ async function saveEntry(date, weight, note='') {
   const pid = activeId;
   const id = parseInt((pid==='p1'?'1':'2') + date.replace(/-/g,''));
 
+  // Check if entry already exists for this date
+  const arr = allData[pid] || [];
+  const existing = arr.find(r=>r.date===date);
+
+  if (existing) {
+    // Show confirmation modal before overwriting
+    openModal('Eintrag überschreiben?', `
+      <div style="color:var(--muted);font-size:13px;line-height:1.6">
+        Für den <b style="color:var(--text)">${fmtDate(date)}</b> existiert bereits ein Eintrag:<br>
+        <span style="color:var(--accent);font-family:var(--mono);font-size:16px">${existing.weight.toFixed(1)} kg</span>
+        ${existing.note ? `<span style="color:var(--muted)"> · ${existing.note}</span>` : ''}<br><br>
+        Wirklich mit <b style="color:var(--text)">${parseFloat(weight).toFixed(1)} kg</b> überschreiben?
+      </div>
+    `, () => doSaveEntry(id, pid, date, weight, note, arr));
+    return;
+  }
+
+  await doSaveEntry(id, pid, date, weight, note, arr);
+}
+
+async function doSaveEntry(id, pid, date, weight, note, arr) {
   await sbFetch('weight_entries', {
     method:'POST',
     headers:{ 'Prefer':'resolution=merge-duplicates,return=representation' },
@@ -417,7 +463,6 @@ async function saveEntry(date, weight, note='') {
   });
 
   // Update local
-  const arr = allData[pid] || [];
   const idx = arr.findIndex(r=>r.date===date);
   const entry = { id, profile_id:pid, date, weight:parseFloat(weight), note };
   if (idx>=0) arr[idx]=entry; else arr.push(entry);
@@ -585,9 +630,17 @@ function renderLogTab(entries, goal, latest, avg7, progressPct, diffToGoal, prof
     <div class="card">
       <div class="date-nav">
         <button class="date-nav-btn" onclick="shiftDate(-1)">‹</button>
-        <div class="date-label">${selectedDate===today?'Heute, ':''}<b>${fmtDate(selectedDate)}</b></div>
-        <button class="date-nav-btn" onclick="shiftDate(1)" ${selectedDate>=today?'disabled style="opacity:.3"':''}>›</button>
-        <button class="today-btn" onclick="selectedDate=todayStr();render()">Heute</button>
+        <div class="date-label-wrap">
+          <div class="date-label">
+            <span class="cal-icon">📅</span>
+            ${selectedDate===today?'<span style="color:var(--accent);font-size:10px;letter-spacing:.08em">HEUTE&nbsp;</span>':''}<b>${fmtDate(selectedDate)}</b>
+          </div>
+          <input class="date-picker-hidden" type="date"
+            value="${selectedDate}" max="${today}"
+            onchange="onDatePick(this.value)">
+        </div>
+        <button class="date-nav-btn" onclick="shiftDate(1)" ${selectedDate>=today?'disabled':''}>›</button>
+        <button class="today-btn" onclick="selectedDate=todayStr();render()" style="${selectedDate===today?'display:none':''}">Heute</button>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:10px">
@@ -732,24 +785,63 @@ function initChart(entries, goal) {
   if (!canvas) return;
   if (chartInst) { chartInst.destroy(); chartInst=null; }
 
-  let filtered = [...entries];
-  if (chartRange !== 'all' && filtered.length) {
+  // Determine date range
+  let startDate, endDate;
+  const today = todayStr();
+
+  if (chartRange === 'all') {
+    // Collect all relevant dates: entries + goal start/end
+    const allDates = entries.map(e=>e.date);
+    if (goal.start_date) allDates.push(goal.start_date);
+    if (goal.target_date) allDates.push(goal.target_date);
+    if (!allDates.length) return;
+    allDates.sort();
+    startDate = allDates[0];
+    endDate = allDates[allDates.length-1];
+    // Cap endDate at today for entries, but allow goal end date in future
+  } else {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - chartRange);
-    const cutStr = cutoff.toISOString().split('T')[0];
-    filtered = filtered.filter(e=>e.date>=cutStr);
+    startDate = cutoff.toISOString().split('T')[0];
+    endDate = today;
   }
 
-  if (!filtered.length) return;
+  // Build a continuous date array from startDate to endDate
+  const dateLabels = [];
+  const d = new Date(startDate+'T00:00:00');
+  const end = new Date(endDate+'T00:00:00');
+  while (d <= end) {
+    dateLabels.push(d.toISOString().split('T')[0]);
+    d.setDate(d.getDate()+1);
+  }
 
-  const labels = filtered.map(e=>fmtDate(e.date));
-  const rawWeights = filtered.map(e=>e.weight);
-  const avgWeights = filtered.map(e=>{
-    const a = get7DayAvg(entries, e.date);
+  if (!dateLabels.length) return;
+
+  // Map entries by date
+  const entryMap = {};
+  for (const e of entries) entryMap[e.date] = e.weight;
+
+  const rawWeights   = dateLabels.map(dt => entryMap[dt] ?? null);
+  const avgWeights   = dateLabels.map(dt => {
+    const a = get7DayAvg(entries, dt);
     return a ? parseFloat(a.toFixed(2)) : null;
   });
-  const targetWeights = filtered.map(e=>getTargetWeightForDate(goal, e.date));
+  const targetWeights = dateLabels.map(dt => getTargetWeightForDate(goal, dt));
   const hasTarget = targetWeights.some(v=>v!==null);
+
+  // Show fewer ticks for wide ranges
+  const totalDays = dateLabels.length;
+  const maxTicks = totalDays > 180 ? 8 : totalDays > 60 ? 10 : 14;
+
+  // Format labels — show fewer for long ranges
+  const labels = dateLabels.map((dt,i) => {
+    if (totalDays > 60) {
+      // Only label ~every Nth day
+      const step = Math.ceil(totalDays / maxTicks);
+      return i % step === 0 ? fmtDate(dt) : '';
+    }
+    return fmtDate(dt);
+  });
 
   const datasets = [
     {
@@ -758,11 +850,12 @@ function initChart(entries, goal) {
       borderColor:'rgba(200,241,53,.5)',
       backgroundColor:'rgba(200,241,53,.15)',
       pointBackgroundColor:'#c8f135',
-      pointRadius:3,
+      pointRadius: dateLabels.map(dt => entryMap[dt] !== undefined ? 3 : 0),
       pointHoverRadius:5,
       tension:0.3,
       borderWidth:1.5,
-      fill:false
+      fill:false,
+      spanGaps:false
     },
     {
       label:'Ø 7 Tage',
@@ -805,7 +898,12 @@ function initChart(entries, goal) {
           borderWidth:1,
           padding:10,
           callbacks:{
-            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} kg`
+            title: ctx => fmtDate(dateLabels[ctx[0].dataIndex]),
+            label: ctx => {
+              const v = ctx.parsed.y;
+              if (v == null) return null;
+              return ` ${ctx.dataset.label}: ${v.toFixed(1)} kg`;
+            }
           }
         }
       },
@@ -813,7 +911,8 @@ function initChart(entries, goal) {
         x:{
           ticks:{
             color:'#5a6178', font:{size:10},
-            maxTicksLimit: chartRange==='all' ? 8 : 10
+            maxRotation:0,
+            callback: (val, idx) => labels[idx] || null
           },
           grid:{ color:'rgba(255,255,255,.04)' }
         },
@@ -865,6 +964,13 @@ function shiftDate(delta) {
   const s = d.toISOString().split('T')[0];
   if (s > todayStr()) return;
   selectedDate = s;
+  render();
+}
+
+function onDatePick(val) {
+  if (!val) return;
+  if (val > todayStr()) val = todayStr();
+  selectedDate = val;
   render();
 }
 
