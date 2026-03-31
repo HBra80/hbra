@@ -394,7 +394,7 @@ async function loadData(){
   try{
     setSS('ing','QQQ-Verlaufsdaten ab 2010 laden…');
     $('hdot').className='sdot dload';$('dataStatus').textContent='QQQ wird geladen (ab 2010)…';
-    const data=await (await fetch(`${SB_URL}/functions/v1/stock-price-history`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${SB_KEY}`},body:JSON.stringify({symbol:'QQQ'})})).json();
+    const data=await (await fetch(`${SB_URL}/functions/v1/dynamic-responder`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${SB_KEY}`},body:JSON.stringify({symbol:'QQQ'})})).json();
     if(!data.dailyCloses||Object.keys(data.dailyCloses).length<100) throw new Error('Zu wenig Daten');
     const entries=Object.entries(data.dailyCloses).filter(([d])=>d>='2010-01-01').sort((a,b)=>a[0]<b[0]?-1:1);
     allDates=entries.map(e=>e[0]);allPrices=entries.map(e=>+e[1]);
