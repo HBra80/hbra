@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habit Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f1117; --white:#1a1d27; --surface:#22263a;
+  --border:#2e3248; --text:#e8ecf4; --muted:#8891aa; --muted2:#4e5572;
+  --blue:#4d8dff; --blue-bg:rgba(77,141,255,.12);
+  --orange:#ff8533; --orange-bg:rgba(255,133,51,.1);
+  --green:#2ecc7a; --green-bg:rgba(46,204,122,.1);
+  --red:#ff5252; --red-bg:rgba(255,82,82,.1);
+  --yellow:#ffc147; --yellow-bg:rgba(255,193,71,.1);
+  --purple:#a78bfa; --purple-bg:rgba(167,139,250,.1);
+  --teal:#2dd4bf; --teal-bg:rgba(45,212,191,.1);
+  --pink:#f472b6; --pink-bg:rgba(244,114,182,.1);
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Inter',sans-serif;
+  --display:'Bebas Neue',cursive;
+  --radius:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.3),0 4px 12px rgba(0,0,0,.2);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+/* Header */
+.header {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.header-left { display: flex; align-items: center; gap: 14px; }
+.logo { font-family: var(--display); font-size: 26px; letter-spacing: 1px; color: var(--blue); line-height: 1; }
+.date-display { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.header-right { display: flex; align-items: center; gap: 10px; }
+
+/* Sync Badge */
+.sync-badge {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 500;
+}
+.sync-ok { background: var(--green-bg); color: var(--green); }
+.sync-err { background: var(--red-bg); color: var(--red); }
+.sync-ing { background: var(--blue-bg); color: var(--blue); }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.sync-ing .sync-dot { animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Nav Tabs */
+.nav {
+  display: flex;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 12px;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nav::-webkit-scrollbar { display: none; }
+.nav-btn {
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  transition: all .2s;
+}
+.nav-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+/* Main Content */
+.main { max-width: 680px; margin: 0 auto; padding: 20px 16px; }
+
+/* Page */
+.page { display: none; }
+.page.active { display: block; }
+
+/* Score Banner */
+.score-banner {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.score-main { display: flex; align-items: center; gap: 16px; }
+.score-ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+.score-ring svg { transform: rotate(-90deg); }
+.score-ring-bg { fill: none; stroke: var(--border); stroke-width: 5; }
+.score-ring-fill { fill: none; stroke: var(--green); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 163; stroke-dashoffset: 163; transition: stroke-dashoffset .8s ease; }
+.score-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 18px; color: var(--text); }
+.score-info { }
+.score-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px; }
+.score-count { font-size: 22px; font-weight: 700; color: var(--text); }
+.score-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.score-streak { text-align: right; }
+.streak-num { font-family: var(--display); font-size: 36px; color: var(--orange); line-height: 1; }
+.streak-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+
+/* Category */
+.category { margin-bottom: 24px; }
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+.cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cat-title {
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 1px;
+  color: var(--text);
+  flex: 1;
+}
+.cat-progress {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Habit Item */
+.habit-list { display: flex; flex-direction: column; gap: 8px; }
+.habit-item {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all .18s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.habit-item:hover { border-color: var(--blue); background: rgba(77,141,255,.04); }
+.habit-item.done { border-color: transparent; }
+.habit-item.done.cat-Ernährung { background: var(--green-bg); border-color: rgba(46,204,122,.25); }
+.habit-item.done.cat-Training { background: var(--blue-bg); border-color: rgba(77,141,255,.25); }
+.habit-item.done.cat-Vermeiden { background: var(--red-bg); border-color: rgba(255,82,82,.2); }
+.habit-item.done.cat-Schlaf { background: var(--purple-bg); border-color: rgba(167,139,250,.25); }
+.habit-item.done.cat-Arbeit { background: var(--yellow-bg); border-color: rgba(255,193,71,.25); }
+.habit-item.done.cat-Familie { background: var(--pink-bg); border-color: rgba(244,114,182,.25); }
+.habit-item.done.cat-Mental { background: var(--teal-bg); border-color: rgba(45,212,191,.25); }
+
+.habit-check {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all .2s;
+  color: transparent;
+  font-size: 13px;
+}
+.habit-item.done .habit-check {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.habit-label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  transition: color .2s;
+}
+.habit-item.done .habit-label { color: var(--muted); text-decoration: line-through; }
+.habit-item.done.cat-Vermeiden .habit-label { text-decoration-color: var(--red); }
+
+.habit-avoid .habit-check { border-color: var(--red-bg); }
+.habit-avoid.done .habit-check { border-color: var(--red); background: var(--red); }
+.habit-avoid.done { /* override done color for avoids */ }
+
+.habit-note {
+  font-size: 11px;
+  color: var(--muted2);
+  font-family: var(--mono);
+}
+
+/* Wochenübersicht */
+.week-section { margin-bottom: 24px; }
+.section-title {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.week-day-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.week-day-card.today { border-color: var(--blue); }
+.wdc-day {
+  font-family: var(--display);
+  font-size: 18px;
+  color: var(--muted);
+  width: 38px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.wdc-day.today { color: var(--blue); }
+.wdc-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.wdc-bar {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--green);
+  transition: width .5s ease;
+}
+.wdc-pct {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.wdc-count {
+  font-size: 11px;
+  color: var(--muted2);
+  font-family: var(--mono);
+  width: 50px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Category Stats */
+.cat-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.cat-stat-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.csc-name { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
+.csc-pct { font-family: var(--display); font-size: 28px; margin-bottom: 4px; }
+.csc-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.csc-bar { height: 100%; border-radius: 2px; transition: width .5s; }
+
+/* Heatmap */
+.heatmap-wrap {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+.heatmap-title { font-size: 13px; color: var(--muted); margin-bottom: 12px; font-weight: 500; }
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  min-width: 280px;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: var(--border);
+  position: relative;
+}
+.heatmap-cell[data-pct="0"] { background: var(--surface); }
+.heatmap-cell[data-pct="25"] { background: rgba(46,204,122,.2); }
+.heatmap-cell[data-pct="50"] { background: rgba(46,204,122,.4); }
+.heatmap-cell[data-pct="75"] { background: rgba(46,204,122,.65); }
+.heatmap-cell[data-pct="100"] { background: var(--green); }
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 13px;
+  gap: 10px;
+}
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* SQL hint */
+.sql-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.sql-box strong { color: var(--yellow); display: block; margin-bottom: 8px; }
+.sql-box pre { white-space: pre-wrap; word-break: break-all; }
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .score-banner { flex-direction: column; align-items: flex-start; }
+  .score-streak { align-self: flex-end; }
+  .cat-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">HABITS</div>
+    <div class="date-display" id="dateDisplay">—</div>
+  </div>
+  <div class="header-right">
+    <div class="sync-badge" id="syncBadge">
+      <div class="sync-dot"></div>
+      <span id="syncText"></span>
+    </div>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" data-page="today">Heute</button>
+  <button class="nav-btn" data-page="week">Woche</button>
+  <button class="nav-btn" data-page="stats">Statistik</button>
+  <button class="nav-btn" data-page="setup">Einrichtung</button>
+</nav>
+
+<div class="main">
+
+  <!-- TODAY PAGE -->
+  <div class="page active" id="page-today">
+    <div class="score-banner">
+      <div class="score-main">
+        <div class="score-ring">
+          <svg viewBox="0 0 56 56" width="64" height="64">
+            <circle class="score-ring-bg" cx="28" cy="28" r="26"/>
+            <circle class="score-ring-fill" id="ringFill" cx="28" cy="28" r="26"/>
+          </svg>
+          <div class="score-pct" id="scorePct">0%</div>
+        </div>
+        <div class="score-info">
+          <div class="score-title">Heute erledigt</div>
+          <div class="score-count" id="scoreCount">0 / 0</div>
+          <div class="score-sub" id="scoreMsg">Leg los!</div>
+        </div>
+      </div>
+      <div class="score-streak">
+        <div class="streak-num" id="streakNum">0</div>
+        <div class="streak-label">🔥 Streak</div>
+      </div>
+    </div>
+
+    <div id="habitLists">
+      <div class="loading"><div class="spinner"></div> Lade Daten…</div>
+    </div>
+  </div>
+
+  <!-- WEEK PAGE -->
+  <div class="page" id="page-week">
+    <div class="week-section">
+      <div class="section-title">Diese Woche</div>
+      <div class="week-grid" id="weekGrid">
+        <div class="loading"><div class="spinner"></div> Lade…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS PAGE -->
+  <div class="page" id="page-stats">
+    <div class="section-title">Kategorien (7 Tage)</div>
+    <div class="cat-stats-grid" id="catStats">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+    <div class="section-title">Verlauf (28 Tage)</div>
+    <div class="heatmap-wrap">
+      <div class="heatmap-title">Erfüllungsgrad pro Tag</div>
+      <div class="heatmap-grid" id="heatmapGrid"></div>
+    </div>
+  </div>
+
+  <!-- SETUP PAGE -->
+  <div class="page" id="page-setup">
+    <div class="section-title">Einrichtung</div>
+    <div class="sql-box">
+      <strong>⚠️ Einmalig: SQL in Supabase ausführen</strong>
+      <pre id="sqlHint"></pre>
+    </div>
+    <div class="habit-list" style="gap:6px">
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;">
+        Führe den SQL-Code oben im <strong style="color:var(--text)">Supabase SQL Editor</strong> aus, 
+        um die Tabellen <code style="color:var(--blue)">habits</code> und <code style="color:var(--blue)">habit_logs</code> anzulegen.<br><br>
+        Danach kannst du sofort lostracken. Die Gewohnheitsliste ist bereits vorgeladen.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const SB_URL = 'https://cltfjarsnvpxgzlirtiv.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdGZqYXJzbnZweGd6bGlydGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzg1ODQsImV4cCI6MjA4ODkxNDU4NH0.kXs7tW9DcDSThW3NbK9MsMH5FfHs65ZCNBxS-cvI7bk';
+
+// ─── HABITS DEFINITION ───────────────────────────────────────────────────────
+const HABITS = [
+  // Ernährung
+  { id:'ern1', cat:'Ernährung', label:'Kreatin einnehmen', note:'3–5g täglich', avoid:false },
+  { id:'ern2', cat:'Ernährung', label:'Kollagen einnehmen', note:'10–15g morgens', avoid:false },
+  { id:'ern3', cat:'Ernährung', label:'Omega-3 einnehmen', note:'2–3g EPA+DHA', avoid:false },
+  { id:'ern4', cat:'Ernährung', label:'Ausreichend Wasser trinken', note:'≥2 Liter', avoid:false },
+  { id:'ern5', cat:'Ernährung', label:'Proteinreiches Frühstück', note:'Sättigt & stabilisiert', avoid:false },
+  // Training
+  { id:'trn1', cat:'Training', label:'Ausdauer oder Kraft', note:'Min. 30 Min.', avoid:false },
+  { id:'trn2', cat:'Training', label:'10.000 Schritte', note:'Aktiv bleiben', avoid:false },
+  { id:'trn3', cat:'Training', label:'Mobility / Dehnen', note:'5–10 Min. reicht', avoid:false },
+  // Vermeiden
+  { id:'vrm1', cat:'Vermeiden', label:'Kaffee direkt nach dem Aufstehen', note:'Erst 90 Min. warten', avoid:true },
+  { id:'vrm2', cat:'Vermeiden', label:'Social Media vor 9 Uhr', note:'Kein Dopamin-Kick früh', avoid:true },
+  { id:'vrm3', cat:'Vermeiden', label:'Snacks nach 20 Uhr', note:'Insulin niedrig halten', avoid:true },
+  { id:'vrm4', cat:'Vermeiden', label:'Alkohol', note:'Schlaf & Recovery', avoid:true },
+  { id:'vrm5', cat:'Vermeiden', label:'Smartphone im Bett', note:'Blaulicht blockt Melatonin', avoid:true },
+  // Schlaf & Erholung
+  { id:'slp1', cat:'Schlaf', label:'Vor 23 Uhr schlafen', note:'Zirkadiane Rhythmus', avoid:false },
+  { id:'slp2', cat:'Schlaf', label:'7–9h Schlaf', note:'Regeneration & Kognition', avoid:false },
+  { id:'slp3', cat:'Schlaf', label:'Morgenroutine halten', note:'Konsistenz = Energie', avoid:false },
+  { id:'slp4', cat:'Schlaf', label:'Sonnenlicht in ersten 30 Min.', note:'Cortisol-Aufwachpeak', avoid:false },
+  // Arbeit & Fokus
+  { id:'arb1', cat:'Arbeit', label:'Deep Work Block (2h)', note:'Keine Unterbrechungen', avoid:false },
+  { id:'arb2', cat:'Arbeit', label:'Tagesplan erstellt', note:'3 Hauptaufgaben definiert', avoid:false },
+  { id:'arb3', cat:'Arbeit', label:'Pomodoro-Technik', note:'25 Min. Fokus / 5 Pause', avoid:false },
+  { id:'arb4', cat:'Arbeit', label:'Postfach geleert', note:'Inbox Zero anstreben', avoid:false },
+  // Familie & Beziehungen
+  { id:'fam1', cat:'Familie', label:'Bewusstes Zeit mit Familie', note:'Mind. 30 Min. präsent', avoid:false },
+  { id:'fam2', cat:'Familie', label:'Dankbarkeit ausdrücken', note:'Kleines Zeichen genügt', avoid:false },
+  { id:'fam3', cat:'Familie', label:'Aktiv zuhören', note:'Ohne Handy / Ablenkung', avoid:false },
+  // Mentales Wohlbefinden
+  { id:'mnt1', cat:'Mental', label:'Meditation / Atemübung', note:'5–10 Min.', avoid:false },
+  { id:'mnt2', cat:'Mental', label:'Journaling', note:'Gedanken sortieren', avoid:false },
+  { id:'mnt3', cat:'Mental', label:'Lesen (kein Screen)', note:'Wissen & Entspannung', avoid:false },
+  { id:'mnt4', cat:'Mental', label:'Keine Nachrichten vor 10 Uhr', note:'Stressfreier Morgen', avoid:true },
+];
+
+const CAT_COLORS = {
+  'Ernährung': { color: 'var(--green)', bg: 'var(--green-bg)' },
+  'Training':  { color: 'var(--blue)',  bg: 'var(--blue-bg)'  },
+  'Vermeiden': { color: 'var(--red)',   bg: 'var(--red-bg)'   },
+  'Schlaf':    { color: 'var(--purple)',bg: 'var(--purple-bg)'},
+  'Arbeit':    { color: 'var(--yellow)',bg: 'var(--yellow-bg)'},
+  'Familie':   { color: 'var(--pink)',  bg: 'var(--pink-bg)'  },
+  'Mental':    { color: 'var(--teal)', bg: 'var(--teal-bg)'  },
+};
+
+const SQL_SETUP = `-- Einmalig im Supabase SQL Editor ausführen:
+
+CREATE TABLE IF NOT EXISTS habits (
+  id text PRIMARY KEY,
+  cat text NOT NULL,
+  label text NOT NULL,
+  note text,
+  avoid boolean DEFAULT false,
+  sort_order integer DEFAULT 0,
+  active boolean DEFAULT true
+);
+
+CREATE TABLE IF NOT EXISTS habit_logs (
+  id bigserial PRIMARY KEY,
+  habit_id text NOT NULL,
+  log_date date NOT NULL,
+  done boolean DEFAULT true,
+  UNIQUE(habit_id, log_date)
+);`;
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let todayStr = '';
+let todayLogs = {}; // habitId -> true/false
+let weekData = {}; // dateStr -> { total, done }
+let historyData = {}; // dateStr -> pct
+let streak = 0;
+let syncTimer = null;
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+function dateLabel(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('de-DE', { weekday:'short' }).toUpperCase();
+}
+function setSyncStatus(type, msg) {
+  const badge = document.getElementById('syncBadge');
+  badge.style.display = 'flex';
+  badge.className = `sync-badge sync-${type}`;
+  document.getElementById('syncText').textContent = msg;
+  if (type === 'ok') setTimeout(() => badge.style.display = 'none', 2500);
+}
+
+// ─── DB ──────────────────────────────────────────────────────────────────────
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      ...(opts.headers || {})
+    }
+  });
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+async function loadTodayLogs() {
+  try {
+    const rows = await sbFetch(`habit_logs?log_date=eq.${todayStr}&select=habit_id,done`);
+    todayLogs = {};
+    rows.forEach(r => { todayLogs[r.habit_id] = r.done; });
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+async function toggleLog(habitId, currentDone) {
+  const newDone = !currentDone;
+  setSyncStatus('ing', 'Speichern…');
+  try {
+    if (newDone) {
+      await sbFetch('habit_logs', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify({ habit_id: habitId, log_date: todayStr, done: true })
+      });
+    } else {
+      await sbFetch(`habit_logs?habit_id=eq.${habitId}&log_date=eq.${todayStr}`, {
+        method: 'DELETE',
+        headers: { 'Prefer': '' }
+      });
+    }
+    todayLogs[habitId] = newDone;
+    setSyncStatus('ok', 'Gespeichert');
+    updateScore();
+    return newDone;
+  } catch(e) {
+    setSyncStatus('err', 'Fehler!');
+    return currentDone;
+  }
+}
+
+async function loadWeekLogs() {
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().split('T')[0]);
+  }
+  try {
+    const rows = await sbFetch(
+      `habit_logs?log_date=gte.${days[0]}&log_date=lte.${days[6]}&done=eq.true&select=habit_id,log_date`
+    );
+    weekData = {};
+    days.forEach(d => { weekData[d] = { total: HABITS.length, done: 0 }; });
+    rows.forEach(r => {
+      if (weekData[r.log_date]) weekData[r.log_date].done++;
+    });
+    return days;
+  } catch(e) { return []; }
+}
+
+async function loadHistory28() {
+  const days = [];
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().split('T')[0]);
+  }
+  try {
+    const rows = await sbFetch(
+      `habit_logs?log_date=gte.${days[0]}&done=eq.true&select=habit_id,log_date`
+    );
+    const counts = {};
+    days.forEach(d => { counts[d] = 0; });
+    rows.forEach(r => { if (counts[r.log_date] !== undefined) counts[r.log_date]++; });
+    historyData = {};
+    days.forEach(d => {
+      historyData[d] = HABITS.length > 0 ? Math.round((counts[d] / HABITS.length) * 100) : 0;
+    });
+    return days;
+  } catch(e) { return []; }
+}
+
+// ─── STREAK CALC ─────────────────────────────────────────────────────────────
+function calcStreak() {
+  let s = 0;
+  const today = new Date(todayStr);
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const ds = d.toISOString().split('T')[0];
+    const pct = historyData[ds];
+    if (pct === undefined && i === 0) continue; // today might not be done yet
+    if (pct >= 50 || (i === 0 && Object.values(todayLogs).filter(Boolean).length > 0)) {
+      s++;
+    } else if (i > 0) break;
+  }
+  return s;
+}
+
+// ─── RENDER TODAY ─────────────────────────────────────────────────────────────
+function renderToday() {
+  const cats = [...new Set(HABITS.map(h => h.cat))];
+  const container = document.getElementById('habitLists');
+  container.innerHTML = '';
+
+  cats.forEach(cat => {
+    const catHabits = HABITS.filter(h => h.cat === cat);
+    const c = CAT_COLORS[cat] || { color:'var(--blue)', bg:'var(--blue-bg)' };
+    const doneCnt = catHabits.filter(h => todayLogs[h.id]).length;
+
+    const catEl = document.createElement('div');
+    catEl.className = 'category';
+    catEl.innerHTML = `
+      <div class="category-header">
+        <div class="cat-dot" style="background:${c.color}"></div>
+        <div class="cat-title">${cat}</div>
+        <div class="cat-progress" style="color:${c.color}">${doneCnt}/${catHabits.length}</div>
+      </div>
+      <div class="habit-list" id="catList-${cat}"></div>
+    `;
+    container.appendChild(catEl);
+
+    const list = catEl.querySelector(`#catList-${cat}`);
+    catHabits.forEach(h => {
+      const item = document.createElement('div');
+      const isDone = !!todayLogs[h.id];
+      item.className = `habit-item cat-${cat}${isDone ? ' done' : ''}${h.avoid ? ' habit-avoid' : ''}`;
+      item.dataset.id = h.id;
+      item.innerHTML = `
+        <div class="habit-check">${isDone ? '✓' : ''}</div>
+        <div class="habit-label">${h.label}</div>
+        ${h.note ? `<div class="habit-note">${h.note}</div>` : ''}
+      `;
+      item.addEventListener('click', async () => {
+        const wasD = !!todayLogs[h.id];
+        // Optimistic update
+        const newD = !wasD;
+        todayLogs[h.id] = newD;
+        updateHabitItem(item, h, newD, cat);
+        updateScore();
+        updateCatProgress(cat);
+        // Persist
+        await toggleLog(h.id, wasD);
+      });
+      list.appendChild(item);
+    });
+  });
+
+  updateScore();
+}
+
+function updateHabitItem(item, h, isDone, cat) {
+  item.className = `habit-item cat-${cat}${isDone ? ' done' : ''}${h.avoid ? ' habit-avoid' : ''}`;
+  item.querySelector('.habit-check').textContent = isDone ? '✓' : '';
+}
+
+function updateCatProgress(cat) {
+  const catHabits = HABITS.filter(h => h.cat === cat);
+  const doneCnt = catHabits.filter(h => todayLogs[h.id]).length;
+  const c = CAT_COLORS[cat] || { color:'var(--blue)' };
+  const prog = document.querySelector(`.category-header .cat-progress[style*="${c.color.replace('var(','').replace(')','').trim()}"]`);
+  // Re-find properly
+  document.querySelectorAll('.category-header').forEach(ch => {
+    if (ch.querySelector('.cat-title')?.textContent === cat) {
+      const p = ch.querySelector('.cat-progress');
+      if (p) p.textContent = `${doneCnt}/${catHabits.length}`;
+    }
+  });
+}
+
+function updateScore() {
+  const total = HABITS.length;
+  const done = HABITS.filter(h => !!todayLogs[h.id]).length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  document.getElementById('scoreCount').textContent = `${done} / ${total}`;
+  document.getElementById('scorePct').textContent = `${pct}%`;
+
+  const circumference = 163;
+  const offset = circumference - (pct / 100) * circumference;
+  document.getElementById('ringFill').style.strokeDashoffset = offset;
+
+  const msgs = ['Leg los! 💪', 'Guter Start! 🌱', 'Weiter so! 🔥', 'Fast geschafft! ⚡', 'Perfekter Tag! 🏆'];
+  const idx = Math.floor(pct / 25);
+  document.getElementById('scoreMsg').textContent = msgs[Math.min(idx, 4)];
+
+  // Streak
+  streak = calcStreak();
+  document.getElementById('streakNum').textContent = streak;
+}
+
+// ─── RENDER WEEK ──────────────────────────────────────────────────────────────
+function renderWeek(days) {
+  const grid = document.getElementById('weekGrid');
+  grid.innerHTML = '';
+  const total = HABITS.length;
+
+  days.forEach(d => {
+    const isToday = d === todayStr;
+    const done = d === todayStr
+      ? HABITS.filter(h => !!todayLogs[h.id]).length
+      : (weekData[d]?.done || 0);
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    const card = document.createElement('div');
+    card.className = `week-day-card${isToday ? ' today' : ''}`;
+    const barColor = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : pct > 0 ? 'var(--orange)' : 'var(--border)';
+    card.innerHTML = `
+      <div class="wdc-day ${isToday ? 'today' : ''}">${dateLabel(d)}</div>
+      <div class="wdc-bar-wrap"><div class="wdc-bar" style="width:${pct}%;background:${barColor}"></div></div>
+      <div class="wdc-pct" style="color:${barColor}">${pct}%</div>
+      <div class="wdc-count">${done}/${total}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ─── RENDER STATS ─────────────────────────────────────────────────────────────
+async function renderStats() {
+  // Category stats from week data
+  const catGrid = document.getElementById('catStats');
+  catGrid.innerHTML = '';
+  const cats = [...new Set(HABITS.map(h => h.cat))];
+
+  // Load 7d logs
+  const days7 = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    days7.push(d.toISOString().split('T')[0]);
+  }
+
+  let rows7 = [];
+  try {
+    rows7 = await sbFetch(`habit_logs?log_date=gte.${days7[0]}&done=eq.true&select=habit_id,log_date`);
+  } catch(e) {}
+
+  cats.forEach(cat => {
+    const catHabits = HABITS.filter(h => h.cat === cat);
+    const c = CAT_COLORS[cat] || { color:'var(--blue)', bg:'var(--blue-bg)' };
+    const possible = catHabits.length * 7;
+    const done = rows7.filter(r => catHabits.find(h => h.id === r.habit_id)).length;
+    // add today
+    const todayDone = catHabits.filter(h => !!todayLogs[h.id]).length;
+    const totalDone = done; // logs already include today if loaded
+    const pct = possible > 0 ? Math.round((totalDone / possible) * 100) : 0;
+
+    const card = document.createElement('div');
+    card.className = 'cat-stat-card';
+    card.innerHTML = `
+      <div class="csc-name">${cat}</div>
+      <div class="csc-pct" style="color:${c.color}">${pct}%</div>
+      <div class="csc-bar-wrap"><div class="csc-bar" style="width:${pct}%;background:${c.color}"></div></div>
+    `;
+    catGrid.appendChild(card);
+  });
+
+  // Heatmap
+  const days28 = await loadHistory28();
+  const heatmap = document.getElementById('heatmapGrid');
+  heatmap.innerHTML = '';
+  days28.forEach(d => {
+    const pct = historyData[d] || 0;
+    let bucket = 0;
+    if (pct >= 80) bucket = 100;
+    else if (pct >= 60) bucket = 75;
+    else if (pct >= 30) bucket = 50;
+    else if (pct > 0) bucket = 25;
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell';
+    cell.dataset.pct = bucket;
+    cell.title = `${d}: ${pct}%`;
+    heatmap.appendChild(cell);
+  });
+}
+
+// ─── SETUP PAGE ──────────────────────────────────────────────────────────────
+function renderSetup() {
+  document.getElementById('sqlHint').textContent = SQL_SETUP;
+}
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const page = btn.dataset.page;
+    document.getElementById(`page-${page}`).classList.add('active');
+
+    if (page === 'week') {
+      const days = await loadWeekLogs();
+      renderWeek(days);
+    } else if (page === 'stats') {
+      await renderStats();
+    }
+  });
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  todayStr = todayISO();
+  const d = new Date();
+  document.getElementById('dateDisplay').textContent =
+    d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' });
+
+  renderSetup();
+
+  const ok = await loadTodayLogs();
+  if (ok) {
+    renderToday();
+  } else {
+    document.getElementById('habitLists').innerHTML = `
+      <div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8">
+        ⚠️ Datenbank nicht gefunden.<br>
+        Bitte zuerst den SQL-Code im Tab <strong style="color:var(--text)">Einrichtung</strong> ausführen.
+      </div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
