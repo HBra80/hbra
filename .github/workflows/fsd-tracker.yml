@@ -1,0 +1,24 @@
+name: Tesla FSD Miles Tracker
+ 
+on:
+  schedule:
+    # Every hour at :00
+    - cron: '0 * * * *'
+  workflow_dispatch:  # Manual trigger for testing
+ 
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+ 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+ 
+      - name: Run scraper
+        env:
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python scraper.py
+ 
