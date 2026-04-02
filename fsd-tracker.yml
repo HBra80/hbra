@@ -1,0 +1,39 @@
+name: Tesla FSD Miles Tracker
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      target_table:
+        description: 'Supabase table to write to'
+        required: false
+        default: 'fsd_miles'
+        type: string
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y tesseract-ocr
+
+      - name: Install Python dependencies
+        run: |
+          pip install playwright
+          playwright install chromium firefox --with-deps
+
+      - name: Run scraper
+        env:
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          TARGET_TABLE: ${{ inputs.target_table || 'fsd_miles' }}
+        run: python scraper_playwright.py
