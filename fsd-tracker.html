@@ -14,8 +14,6 @@
   --orange:#f56a00; --orange-bg:#fff3ea;
   --green:#00a854; --green-bg:#e6f7ee;
   --red:#d93025; --red-bg:#fdecea;
-  --yellow:#f0a500; --yellow-bg:#fff8e6;
-  --purple:#7c3aed; --purple-bg:#f3f0ff;
   --mono:'JetBrains Mono',monospace;
   --sans:'Inter',sans-serif;
   --display:'Bebas Neue',cursive;
@@ -30,108 +28,103 @@
     --orange:#ff8533; --orange-bg:rgba(255,133,51,.1);
     --green:#2ecc7a; --green-bg:rgba(46,204,122,.1);
     --red:#ff5252; --red-bg:rgba(255,82,82,.1);
-    --yellow:#ffc147; --yellow-bg:rgba(255,193,71,.1);
-    --purple:#a78bfa; --purple-bg:rgba(167,139,250,.1);
   }
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;padding:24px 20px}
 
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
-.header-left h1{font-family:var(--display);font-size:2rem;letter-spacing:.5px}
-.header-left p{color:var(--muted);font-size:.82rem;margin-top:3px}
+.header h1{font-family:var(--display);font-size:2rem;letter-spacing:.5px}
+.header p{color:var(--muted);font-size:.82rem;margin-top:3px}
 .version{display:inline-block;background:var(--blue-bg);color:var(--blue);font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:8px;margin-left:8px;vertical-align:middle;font-family:var(--mono)}
-.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-
-.tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid var(--border)}
-.tab{padding:10px 22px;font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s;user-select:none}
-.tab:hover{color:var(--text)}
-.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
-.tab-badge{display:inline-block;background:var(--orange-bg);color:var(--orange);font-size:.68rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle}
-
-.btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--white);color:var(--text);font-size:.78rem;cursor:pointer;font-family:var(--sans);font-weight:500;transition:.15s}
-.btn:hover{border-color:var(--blue);color:var(--blue)}
-.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;padding:9px 22px;font-size:.85rem}
-.btn-primary:hover{background:#1558d6;border-color:#1558d6;color:#fff}
-.btn-primary:disabled{background:var(--muted2);border-color:var(--muted2);cursor:not-allowed;color:#fff}
-
+.header-right{display:flex;align-items:center;gap:10px}
 .sync-badge{display:none;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:.76rem;font-weight:500}
 .sync-ok{background:var(--green-bg);color:var(--green)}
 .sync-err{background:var(--red-bg);color:var(--red)}
 .sync-ing{background:var(--blue-bg);color:var(--blue)}
 
-/* SNAPSHOT HERO */
-.snapshot-hero{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);margin-bottom:24px}
-.snapshot-hero h2{font-family:var(--display);font-size:1.1rem;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;text-transform:uppercase}
-.snapshot-hero p{font-size:.8rem;color:var(--muted);margin-bottom:18px}
-.snap-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.snap-status{font-size:.8rem;font-family:var(--mono)}
+.tabs{display:flex;margin-bottom:24px;border-bottom:2px solid var(--border)}
+.tab{padding:10px 22px;font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s;user-select:none}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-badge{display:inline-block;background:var(--orange-bg);color:var(--orange);font-size:.68rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:6px}
+
+.btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--white);color:var(--text);font-size:.78rem;cursor:pointer;font-family:var(--sans);font-weight:500;transition:.15s}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;padding:9px 22px;font-size:.85rem}
+.btn-primary:hover{background:#1558d6;border-color:#1558d6;color:#fff}
+.btn-primary:disabled{background:var(--muted2);border-color:var(--muted2);cursor:not-allowed}
+.btn-del{padding:2px 8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:.72rem;cursor:pointer;transition:.15s;line-height:1.4}
+.btn-del:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+
+.snapshot-hero{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;box-shadow:var(--shadow);margin-bottom:20px}
+.snapshot-hero h2{font-family:var(--display);font-size:1rem;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;text-transform:uppercase}
+.snapshot-hero p{font-size:.79rem;color:var(--muted);margin-bottom:16px}
+.snap-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.snap-status{font-size:.79rem;font-family:var(--mono)}
 .snap-status.ok{color:var(--green)}
 .snap-status.err{color:var(--red)}
 .snap-status.ing{color:var(--blue)}
-.snap-info{margin-top:14px;padding:12px 16px;background:var(--surface);border-radius:8px;font-size:.78rem;color:var(--muted);line-height:1.6;border:1px solid var(--border)}
-.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+.snap-info{margin-top:12px;padding:10px 14px;background:var(--surface);border-radius:8px;font-size:.77rem;color:var(--muted);border:1px solid var(--border)}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.section-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 10px}
-.top-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:4px}
-.top-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
-.top-card .label{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-.top-card .value{font-family:var(--display);font-size:2.1rem;letter-spacing:.5px;line-height:1}
-.top-card .sub{font-size:.75rem;color:var(--muted);margin-top:6px;font-family:var(--mono)}
+.section-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:20px 0 10px}
+.top-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:4px}
+.top-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
+.top-card .label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.top-card .value{font-family:var(--display);font-size:2rem;letter-spacing:.5px;line-height:1}
+.top-card .sub{font-size:.74rem;color:var(--muted);margin-top:5px;font-family:var(--mono)}
 .top-card.blue .value{color:var(--blue)}
 .top-card.green .value{color:var(--green)}
 .top-card.orange .value{color:var(--orange)}
 
-.growth-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:6px}
-.stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow)}
-.stat-card .label{font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
-.stat-card .value{font-family:var(--display);font-size:1.55rem;letter-spacing:.5px;line-height:1.1}
-.stat-card .rate{font-size:.7rem;color:var(--muted);margin-top:4px;font-family:var(--mono)}
+.growth-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:4px}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:14px 15px;box-shadow:var(--shadow)}
+.stat-card .label{font-size:.67rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.stat-card .value{font-family:var(--display);font-size:1.5rem;letter-spacing:.5px;line-height:1.1}
+.stat-card .rate{font-size:.69rem;color:var(--muted);margin-top:4px;font-family:var(--mono)}
 .stat-card.blue .value{color:var(--blue)}
 .stat-card.green .value{color:var(--green)}
 .stat-card.orange .value{color:var(--orange)}
 
-.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:20px}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
-.card-title{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.chart-wrap{height:300px;position:relative}
-.chart-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
-.legend-item{display:flex;align-items:center;gap:7px;font-size:.76rem;color:var(--muted)}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:18px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.card-title{font-size:.76rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.chart-wrap{height:280px;position:relative}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.74rem;color:var(--muted)}
 
-.filter-bar{display:flex;gap:6px;flex-wrap:wrap}
-.filter-btn{padding:4px 13px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.74rem;cursor:pointer;font-family:var(--sans);transition:.15s}
+.filter-bar{display:flex;gap:5px;flex-wrap:wrap}
+.filter-btn{padding:4px 12px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.73rem;cursor:pointer;font-family:var(--sans);transition:.15s}
 .filter-btn:hover,.filter-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
 
-table{width:100%;border-collapse:collapse;font-size:.79rem}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
 thead tr{background:var(--surface)}
-th{text-align:right;color:var(--muted);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;padding:9px 10px;border-bottom:2px solid var(--border);white-space:nowrap}
+th{text-align:right;color:var(--muted);font-weight:600;font-size:.67rem;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:2px solid var(--border);white-space:nowrap}
 th:first-child{text-align:left}
-td{padding:8px 10px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.76rem;text-align:right;white-space:nowrap}
-td:first-child{text-align:left;font-family:var(--sans);font-size:.77rem;color:var(--muted)}
+th:last-child{text-align:center;width:50px}
+td{padding:7px 10px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.75rem;text-align:right;white-space:nowrap}
+td:first-child{text-align:left;font-family:var(--sans);font-size:.76rem;color:var(--muted)}
+td:last-child{text-align:center}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--surface)}
 .dp{color:var(--green);font-weight:500}
 .dn{color:var(--red)}
 .dz{color:var(--muted2)}
-.no-data{text-align:center;padding:48px;color:var(--muted);font-size:.88rem;font-family:var(--sans)}
+.no-data{text-align:center;padding:40px;color:var(--muted);font-size:.87rem;font-family:var(--sans)}
 
 .tab-panel{display:none}
 .tab-panel.active{display:block}
 
-@media(max-width:600px){
-  body{padding:14px 10px}
-  .top-card .value{font-size:1.65rem}
-  .stat-card .value{font-size:1.3rem}
-  .tab{padding:8px 14px;font-size:.78rem}
-}
+.top-bar{display:flex;justify-content:flex-end;margin-bottom:6px;gap:8px}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-left">
-    <h1>Tesla FSD Miles Tracker <span class="version">v1.1</span></h1>
+  <div>
+    <h1>Tesla FSD Miles Tracker <span class="version">v1.2</span></h1>
     <p>Stündliche Aufzeichnung via GitHub Actions · Quelle: tesla.com/de_AT/fsd/safety</p>
   </div>
   <div class="header-right">
@@ -144,19 +137,19 @@ tr:hover td{background:var(--surface)}
   <div class="tab" onclick="switchTab('manual',this)">📸 Snapshots (manuell)<span class="tab-badge" id="manualCount">0</span></div>
 </div>
 
-<!-- TAB 1: STÜNDLICH -->
+<!-- ═══ TAB 1: STÜNDLICH ═══ -->
 <div class="tab-panel active" id="panel-hourly">
-  <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+  <div class="top-bar">
     <button class="btn" onclick="exportCSV('h')">⬇ CSV Export</button>
   </div>
   <div class="section-label">Aktuelle Gesamtwerte</div>
   <div class="top-stats">
-    <div class="top-card blue"><div class="label">Gesamtmeilen (Total)</div><div class="value" id="h-curTotal">—</div><div class="sub" id="h-curTotalSub">—</div></div>
+    <div class="top-card blue"><div class="label">Gesamtmeilen</div><div class="value" id="h-curTotal">—</div><div class="sub" id="h-curTotalSub">—</div></div>
     <div class="top-card green"><div class="label">Stadtmeilen</div><div class="value" id="h-curCity">—</div><div class="sub" id="h-curCitySub">—</div></div>
-    <div class="top-card orange"><div class="label">Überlandmeilen (berechnet)</div><div class="value" id="h-curRural">—</div><div class="sub" id="h-curRuralSub">—</div></div>
+    <div class="top-card orange"><div class="label">Überlandmeilen</div><div class="value" id="h-curRural">—</div><div class="sub" id="h-curRuralSub">—</div></div>
   </div>
   <div id="h-growthSection"></div>
-  <div class="card" style="margin-top:24px">
+  <div class="card" style="margin-top:20px">
     <div class="card-header">
       <div class="card-title">Verlauf</div>
       <div class="filter-bar">
@@ -169,9 +162,9 @@ tr:hover td{background:var(--surface)}
     </div>
     <div class="chart-wrap"><canvas id="h-mainChart"></canvas></div>
     <div class="chart-legend">
-      <div class="legend-item"><div style="width:18px;height:3px;background:var(--blue);border-radius:2px"></div>Gesamtmeilen</div>
-      <div class="legend-item"><div style="width:18px;height:0;border-top:2px dashed var(--green)"></div>Stadtmeilen</div>
-      <div class="legend-item"><div style="width:18px;height:0;border-top:2px dotted var(--orange)"></div>Überlandmeilen</div>
+      <div class="legend-item"><div style="width:16px;height:3px;background:var(--blue);border-radius:2px"></div>Gesamtmeilen</div>
+      <div class="legend-item"><div style="width:16px;height:0;border-top:2px dashed var(--green)"></div>Stadtmeilen</div>
+      <div class="legend-item"><div style="width:16px;height:0;border-top:2px dotted var(--orange)"></div>Überlandmeilen</div>
     </div>
   </div>
   <div class="card">
@@ -184,44 +177,46 @@ tr:hover td{background:var(--surface)}
       </div>
     </div>
     <div style="overflow-x:auto">
-      <table><thead><tr>
-        <th>Zeitpunkt</th><th>Gesamt</th><th>Δ Gesamt</th>
-        <th>Stadt</th><th>Δ Stadt</th>
-        <th>Überland</th><th>Δ Überland</th><th>Meilen/h</th>
-      </tr></thead><tbody id="h-tableBody"><tr><td colspan="8" class="no-data">Wird geladen…</td></tr></tbody></table>
+      <table>
+        <thead><tr>
+          <th>Zeitpunkt</th><th>Gesamt</th><th>Δ Gesamt</th>
+          <th>Stadt</th><th>Δ Stadt</th>
+          <th>Überland</th><th>Δ Überland</th><th>Meilen/h</th>
+          <th>🗑</th>
+        </tr></thead>
+        <tbody id="h-tableBody"><tr><td colspan="9" class="no-data">Wird geladen…</td></tr></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<!-- TAB 2: SNAPSHOTS -->
+<!-- ═══ TAB 2: SNAPSHOTS ═══ -->
 <div class="tab-panel" id="panel-manual">
 
   <div class="snapshot-hero">
     <h2>Aktuellen Wert von Tesla abrufen</h2>
-    <p>Startet den GitHub Actions Scraper sofort — Ergebnis erscheint nach ca. 40 Sekunden in der Tabelle unten.</p>
+    <p>Startet GitHub Actions Scraper sofort → scrapt tesla.com → speichert in Tab "Snapshots" → Ergebnis nach ~40 Sek.</p>
     <div class="snap-row">
-      <button class="btn btn-primary" id="snapBtn" onclick="takeSnapshot()">
-        📸 Jetzt Snapshot aufnehmen
-      </button>
+      <button class="btn btn-primary" id="snapBtn" onclick="takeSnapshot()">📸 Jetzt Snapshot aufnehmen</button>
       <div class="snap-status" id="snapStatus"></div>
     </div>
     <div class="snap-info" id="snapInfo" style="display:none"></div>
   </div>
 
-  <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+  <div class="top-bar">
     <button class="btn" onclick="exportCSV('m')">⬇ CSV Export</button>
   </div>
 
   <div class="section-label">Letzter Snapshot</div>
   <div class="top-stats">
-    <div class="top-card blue"><div class="label">Gesamtmeilen (Total)</div><div class="value" id="m-curTotal">—</div><div class="sub" id="m-curTotalSub">—</div></div>
+    <div class="top-card blue"><div class="label">Gesamtmeilen</div><div class="value" id="m-curTotal">—</div><div class="sub" id="m-curTotalSub">—</div></div>
     <div class="top-card green"><div class="label">Stadtmeilen</div><div class="value" id="m-curCity">—</div><div class="sub" id="m-curCitySub">—</div></div>
-    <div class="top-card orange"><div class="label">Überlandmeilen (berechnet)</div><div class="value" id="m-curRural">—</div><div class="sub" id="m-curRuralSub">—</div></div>
+    <div class="top-card orange"><div class="label">Überlandmeilen</div><div class="value" id="m-curRural">—</div><div class="sub" id="m-curRuralSub">—</div></div>
   </div>
   <div id="m-growthSection"></div>
-  <div class="card" style="margin-top:24px">
+  <div class="card" style="margin-top:20px">
     <div class="card-header">
-      <div class="card-title">Verlauf aller Snapshots</div>
+      <div class="card-title">Verlauf Snapshots</div>
       <div class="filter-bar">
         <button class="filter-btn active" onclick="setChartRange('m',this,168)">7 Tage</button>
         <button class="filter-btn" onclick="setChartRange('m',this,720)">30 Tage</button>
@@ -230,9 +225,9 @@ tr:hover td{background:var(--surface)}
     </div>
     <div class="chart-wrap"><canvas id="m-mainChart"></canvas></div>
     <div class="chart-legend">
-      <div class="legend-item"><div style="width:18px;height:3px;background:var(--blue);border-radius:2px"></div>Gesamtmeilen</div>
-      <div class="legend-item"><div style="width:18px;height:0;border-top:2px dashed var(--green)"></div>Stadtmeilen</div>
-      <div class="legend-item"><div style="width:18px;height:0;border-top:2px dotted var(--orange)"></div>Überlandmeilen</div>
+      <div class="legend-item"><div style="width:16px;height:3px;background:var(--blue);border-radius:2px"></div>Gesamtmeilen</div>
+      <div class="legend-item"><div style="width:16px;height:0;border-top:2px dashed var(--green)"></div>Stadtmeilen</div>
+      <div class="legend-item"><div style="width:16px;height:0;border-top:2px dotted var(--orange)"></div>Überlandmeilen</div>
     </div>
   </div>
   <div class="card">
@@ -245,11 +240,15 @@ tr:hover td{background:var(--surface)}
       </div>
     </div>
     <div style="overflow-x:auto">
-      <table><thead><tr>
-        <th>Zeitpunkt</th><th>Gesamt</th><th>Δ Gesamt</th>
-        <th>Stadt</th><th>Δ Stadt</th>
-        <th>Überland</th><th>Δ Überland</th><th>Δ Zeit</th>
-      </tr></thead><tbody id="m-tableBody"><tr><td colspan="8" class="no-data">Noch keine Snapshots — ersten Snapshot oben aufnehmen.</td></tr></tbody></table>
+      <table>
+        <thead><tr>
+          <th>Zeitpunkt</th><th>Gesamt</th><th>Δ Gesamt</th>
+          <th>Stadt</th><th>Δ Stadt</th>
+          <th>Überland</th><th>Δ Überland</th><th>Δ Zeit</th>
+          <th>🗑</th>
+        </tr></thead>
+        <tbody id="m-tableBody"><tr><td colspan="9" class="no-data">Noch keine Snapshots — ersten Snapshot oben aufnehmen.</td></tr></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -259,26 +258,30 @@ const SB_URL = 'https://cltfjarsnvpxgzlirtiv.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdGZqYXJzbnZweGd6bGlydGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzg1ODQsImV4cCI6MjA4ODkxNDU4NH0.kXs7tW9DcDSThW3NbK9MsMH5FfHs65ZCNBxS-cvI7bk';
 
 const state = {
-  h: { data:[], chartHours:24,  tableRows:48,  chart:null },
-  m: { data:[], chartHours:168, tableRows:50,  chart:null },
+  h: { data:[], chartHours:24,  tableRows:48,  chart:null, table:'fsd_miles' },
+  m: { data:[], chartHours:168, tableRows:50,  chart:null, table:'fsd_miles_manual' },
 };
 
-async function sbFetch(path) {
+async function sbFetch(path, opts={}) {
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
-    headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`}
+    ...opts,
+    headers:{
+      'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,
+      'Content-Type':'application/json',...(opts.headers||{})
+    }
   });
-  if (!res.ok) throw new Error(res.status);
-  return res.json();
+  if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  const t=await res.text(); return t?JSON.parse(t):[];
 }
 
-function setSyncStatus(type, msg) {
-  const b = document.getElementById('syncBadge');
-  b.style.display='flex'; b.className=`sync-badge sync-${type}`;
+function setSyncStatus(type,msg){
+  const b=document.getElementById('syncBadge');
+  b.style.display='flex';b.className=`sync-badge sync-${type}`;
   document.getElementById('syncText').textContent=msg;
   if(type==='ok') setTimeout(()=>b.style.display='none',3000);
 }
 
-const fmt  = n => n==null ? '—' : Math.round(n).toLocaleString('de-AT');
+const fmt  = n => n==null?'—':Math.round(n).toLocaleString('de-AT');
 const fmtB = n => {
   if(n==null) return '—';
   if(Math.abs(n)>=1e9) return (n/1e9).toFixed(3)+' Mrd.';
@@ -286,17 +289,17 @@ const fmtB = n => {
   return Math.round(n).toLocaleString('de-AT');
 };
 const fmtT = iso => new Date(iso).toLocaleString('de-AT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
-const rural = r => (r.total_miles!=null&&r.city_miles!=null) ? r.total_miles-r.city_miles : null;
-const pct   = (a,b) => (a&&b) ? ((a/b)*100).toFixed(1)+'%' : '—';
+const rural= r=>(r.total_miles!=null&&r.city_miles!=null)?r.total_miles-r.city_miles:null;
+const pct  = (a,b)=>(a&&b)?((a/b)*100).toFixed(1)+'%':'—';
 
-const PERIODS = [
+const PERIODS=[
   {label:'24 Stunden',hours:24},
   {label:'7 Tage',hours:168},
   {label:'1 Monat',hours:720},
   {label:'1 Jahr',hours:8760},
 ];
 
-function switchTab(tab, el) {
+function switchTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');
@@ -304,29 +307,29 @@ function switchTab(tab, el) {
   setTimeout(()=>renderChart(tab==='hourly'?'h':'m'),50);
 }
 
-function findPrev(data, refTs, hours) {
-  const cutoff = refTs - hours*3600*1000;
-  return data.find(r => new Date(r.recorded_at).getTime() <= cutoff) || null;
+function findPrev(data,refTs,hours){
+  const c=refTs-hours*3600*1000;
+  return data.find(r=>new Date(r.recorded_at).getTime()<=c)||null;
 }
 
-function renderTopStats(p, data) {
-  const l=data[0]; if(!l) return;
+function renderTopStats(p,data){
+  const l=data[0];if(!l)return;
   const r=rural(l);
-  document.getElementById(`${p}-curTotal`).textContent  = fmtB(l.total_miles);
-  document.getElementById(`${p}-curTotalSub`).textContent = 'Stand: '+fmtT(l.recorded_at);
-  document.getElementById(`${p}-curCity`).textContent   = fmtB(l.city_miles);
-  document.getElementById(`${p}-curCitySub`).textContent = pct(l.city_miles,l.total_miles)+' der Gesamtmeilen';
-  document.getElementById(`${p}-curRural`).textContent  = fmtB(r);
-  document.getElementById(`${p}-curRuralSub`).textContent = pct(r,l.total_miles)+' der Gesamtmeilen';
+  document.getElementById(`${p}-curTotal`).textContent=fmtB(l.total_miles);
+  document.getElementById(`${p}-curTotalSub`).textContent='Stand: '+fmtT(l.recorded_at);
+  document.getElementById(`${p}-curCity`).textContent=fmtB(l.city_miles);
+  document.getElementById(`${p}-curCitySub`).textContent=pct(l.city_miles,l.total_miles)+' der Gesamtmeilen';
+  document.getElementById(`${p}-curRural`).textContent=fmtB(r);
+  document.getElementById(`${p}-curRuralSub`).textContent=pct(r,l.total_miles)+' der Gesamtmeilen';
 }
 
-function renderGrowth(p, data) {
-  const l=data[0]; if(!l) return;
+function renderGrowth(p,data){
+  const l=data[0];if(!l)return;
   const refTs=new Date(l.recorded_at).getTime();
   const TYPES=[
-    {label:'Gesamtmeilen',color:'blue',   get:(c,pv)=>c.total_miles!=null&&pv?.total_miles!=null?c.total_miles-pv.total_miles:null},
-    {label:'Stadtmeilen', color:'green',  get:(c,pv)=>c.city_miles!=null&&pv?.city_miles!=null?c.city_miles-pv.city_miles:null},
-    {label:'Überland',    color:'orange', get:(c,pv)=>{const rc=rural(c),rp=pv?rural(pv):null;return rc!=null&&rp!=null?rc-rp:null;}},
+    {label:'Gesamtmeilen',color:'blue',  get:(c,v)=>c.total_miles!=null&&v?.total_miles!=null?c.total_miles-v.total_miles:null},
+    {label:'Stadtmeilen', color:'green', get:(c,v)=>c.city_miles!=null&&v?.city_miles!=null?c.city_miles-v.city_miles:null},
+    {label:'Überland',    color:'orange',get:(c,v)=>{const rc=rural(c),rp=v?rural(v):null;return rc!=null&&rp!=null?rc-rp:null;}},
   ];
   let html='';
   PERIODS.forEach(period=>{
@@ -343,13 +346,13 @@ function renderGrowth(p, data) {
   document.getElementById(`${p}-growthSection`).innerHTML=html;
 }
 
-function getFiltered(data, hours) {
+function getFiltered(data,hours){
   if(hours>=99999) return data;
-  const cutoff=Date.now()-hours*3600*1000;
-  return data.filter(r=>new Date(r.recorded_at).getTime()>=cutoff);
+  const c=Date.now()-hours*3600*1000;
+  return data.filter(r=>new Date(r.recorded_at).getTime()>=c);
 }
 
-function renderChart(p) {
+function renderChart(p){
   const s=state[p];
   const data=getFiltered(s.data,s.chartHours).slice().reverse();
   const isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
@@ -371,13 +374,13 @@ function renderChart(p) {
         legend:{display:false},
         tooltip:{
           backgroundColor:isDark?'#1a1d27':'#fff',borderColor:isDark?'#2e3248':'#e2e6ea',borderWidth:1,
-          titleColor:isDark?'#e8ecf4':'#1a2433',bodyColor:isDark?'#8891aa':'#7a8898',padding:14,
+          titleColor:isDark?'#e8ecf4':'#1a2433',bodyColor:isDark?'#8891aa':'#7a8898',padding:12,
           callbacks:{
             title:items=>fmtT(data[items[0].dataIndex]?.recorded_at||''),
             label:ctx=>`  ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`,
             afterBody:items=>{
               const i=items[0].dataIndex,r=data[i],prev=data[i-1];
-              if(!prev||r.total_miles==null||prev.total_miles==null) return[];
+              if(!prev||r.total_miles==null||prev.total_miles==null)return[];
               const delta=r.total_miles-prev.total_miles;
               const hrs=(new Date(r.recorded_at)-new Date(prev.recorded_at))/3600000;
               return['',`  Δ: +${fmt(delta)}`,`  Rate: ${fmt(Math.round(delta/hrs))} Meilen/h`];
@@ -393,11 +396,29 @@ function renderChart(p) {
   });
 }
 
-function renderTable(p, data) {
+// ── DELETE ROW ────────────────────────────────────────────
+async function deleteRow(p, id) {
+  if(!confirm('Diesen Eintrag löschen?')) return;
+  try {
+    await sbFetch(`${state[p].table}?id=eq.${id}`,{
+      method:'DELETE',
+      headers:{'Prefer':''}
+    });
+    if(p==='h') await loadHourly();
+    else await loadManual();
+  } catch(e) {
+    alert('Fehler beim Löschen: '+e.message);
+  }
+}
+
+function renderTable(p,data){
   const s=state[p];
   const rows=data.slice(0,s.tableRows===99999?data.length:s.tableRows);
   const tbody=document.getElementById(`${p}-tableBody`);
-  if(!rows.length){tbody.innerHTML='<tr><td colspan="8" class="no-data">Noch keine Daten vorhanden.</td></tr>';return;}
+  if(!rows.length){
+    tbody.innerHTML=`<tr><td colspan="9" class="no-data">${p==='m'?'Noch keine Snapshots — ersten Snapshot oben aufnehmen.':'Noch keine Daten vorhanden.'}</td></tr>`;
+    return;
+  }
   const d=v=>v==null?'<span class="dz">—</span>':v>0?`<span class="dp">+${fmt(v)}</span>`:`<span class="dn">${fmt(v)}</span>`;
   tbody.innerHTML=rows.map((r,i)=>{
     const prev=rows[i+1];
@@ -406,18 +427,33 @@ function renderTable(p, data) {
     const rR=rural(r),pR=prev?rural(prev):null;
     const dR=rR!=null&&pR!=null?rR-pR:null;
     const hrs=prev?(new Date(r.recorded_at)-new Date(prev.recorded_at))/3600000:null;
-    const lastCol=p==='m'?(hrs!=null?`${hrs.toFixed(1)}h`:'—'):(dT!=null&&hrs?fmt(Math.round(dT/hrs)):'—');
-    return `<tr><td>${fmtT(r.recorded_at)}</td><td>${fmt(r.total_miles)}</td><td>${d(dT)}</td><td>${fmt(r.city_miles)}</td><td>${d(dC)}</td><td>${fmt(rR)}</td><td>${d(dR)}</td><td>${lastCol}</td></tr>`;
+    const lastCol=p==='m'
+      ?(hrs!=null?`${hrs.toFixed(1)}h`:'—')
+      :(dT!=null&&hrs?fmt(Math.round(dT/hrs)):'—');
+    return `<tr>
+      <td>${fmtT(r.recorded_at)}</td>
+      <td>${fmt(r.total_miles)}</td><td>${d(dT)}</td>
+      <td>${fmt(r.city_miles)}</td><td>${d(dC)}</td>
+      <td>${fmt(rR)}</td><td>${d(dR)}</td>
+      <td>${lastCol}</td>
+      <td><button class="btn-del" onclick="deleteRow('${p}',${r.id})" title="Löschen">✕</button></td>
+    </tr>`;
   }).join('');
 }
 
 function setChartRange(p,btn,hours){
-  document.querySelectorAll(`#panel-${p==='h'?'hourly':'manual'} .filter-btn`).forEach(b=>{if(b.onclick?.toString().includes('setChartRange'))b.classList.remove('active');});
-  btn.classList.add('active'); state[p].chartHours=hours; renderChart(p);
+  const panel=p==='h'?'panel-hourly':'panel-manual';
+  document.querySelectorAll(`#${panel} .filter-btn`).forEach(b=>{
+    if(b.getAttribute('onclick')?.includes('setChartRange'))b.classList.remove('active');
+  });
+  btn.classList.add('active');state[p].chartHours=hours;renderChart(p);
 }
 function setTableRows(p,btn,n){
-  document.querySelectorAll(`#panel-${p==='h'?'hourly':'manual'} .filter-btn`).forEach(b=>{if(b.onclick?.toString().includes('setTableRows'))b.classList.remove('active');});
-  btn.classList.add('active'); state[p].tableRows=n; renderTable(p,state[p].data);
+  const panel=p==='h'?'panel-hourly':'panel-manual';
+  document.querySelectorAll(`#${panel} .filter-btn`).forEach(b=>{
+    if(b.getAttribute('onclick')?.includes('setTableRows'))b.classList.remove('active');
+  });
+  btn.classList.add('active');state[p].tableRows=n;renderTable(p,state[p].data);
 }
 function exportCSV(p){
   const data=state[p].data;
@@ -429,81 +465,75 @@ function exportCSV(p){
   a.click();
 }
 
-// ── SNAPSHOT: triggers GitHub Actions workflow ────────────
-let snapRefreshTimer = null;
-
-async function takeSnapshot() {
+// ── SNAPSHOT: triggers GitHub Actions, writes to fsd_miles_manual ──
+let snapTimer=null;
+async function takeSnapshot(){
   const btn=document.getElementById('snapBtn');
   const status=document.getElementById('snapStatus');
   const info=document.getElementById('snapInfo');
-
   btn.disabled=true;
-  btn.innerHTML='<span class="spinner"></span>Wird gestartet…';
+  btn.innerHTML='<span class="spinner"></span>Starte…';
   status.className='snap-status ing';
-  status.textContent='Starte GitHub Actions Workflow…';
+  status.textContent='GitHub Actions Workflow wird gestartet…';
   info.style.display='none';
-
   try {
-    const res = await fetch(`${SB_URL}/functions/v1/trigger-workflow`, {
+    const res=await fetch(`${SB_URL}/functions/v1/trigger-workflow`,{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${SB_KEY}`},
-      body:JSON.stringify({})
+      body:JSON.stringify({target_table:'fsd_miles_manual'})
     });
-    const result = await res.json();
-
-    if(result.success) {
+    const result=await res.json();
+    if(result.success){
       status.className='snap-status ok';
       status.textContent='✓ Workflow gestartet!';
-      btn.innerHTML='📸 Jetzt Snapshot aufnehmen';
-      btn.disabled=false;
       info.style.display='block';
-      info.textContent='⏳ Der Scraper läuft jetzt auf GitHub (~40 Sek.). Die neuen Daten erscheinen automatisch in Tab "Stündlich" — diese Seite aktualisiert sich in 60 Sekunden.';
-
-      // Auto-refresh after 65 seconds to pick up new data
-      clearTimeout(snapRefreshTimer);
-      snapRefreshTimer = setTimeout(()=>{
-        loadHourly();
-        info.textContent='✓ Daten aktualisiert.';
-        setTimeout(()=>info.style.display='none', 3000);
-      }, 65000);
-
+      info.textContent='⏳ Scraper läuft auf GitHub (~40 Sek.). Ergebnis erscheint automatisch im Tab "Snapshots (manuell)".';
+      clearTimeout(snapTimer);
+      snapTimer=setTimeout(async()=>{
+        await loadManual();
+        info.textContent='✓ Snapshot-Daten aktualisiert.';
+        setTimeout(()=>info.style.display='none',3000);
+      },70000);
     } else {
-      throw new Error(result.error || 'Unbekannter Fehler');
+      throw new Error(result.error||'Unbekannter Fehler');
     }
-  } catch(e) {
+  } catch(e){
     status.className='snap-status err';
     status.textContent='⚠ Fehler: '+e.message;
-    btn.innerHTML='📸 Jetzt Snapshot aufnehmen';
+  } finally {
     btn.disabled=false;
+    btn.innerHTML='📸 Jetzt Snapshot aufnehmen';
   }
 }
 
-async function loadHourly() {
+// ── LOAD ─────────────────────────────────────────────────
+async function loadHourly(){
   setSyncStatus('ing','Lade Daten…');
   try {
-    state.h.data = await sbFetch('fsd_miles?order=recorded_at.desc&limit=10000');
+    state.h.data=await sbFetch('fsd_miles?order=recorded_at.desc&limit=10000');
     renderTopStats('h',state.h.data);
     renderGrowth('h',state.h.data);
     renderChart('h');
     renderTable('h',state.h.data);
     setSyncStatus('ok',`${state.h.data.length} Einträge`);
-  } catch(e) { setSyncStatus('err','Fehler: '+e.message); }
+  } catch(e){setSyncStatus('err','Fehler: '+e.message);}
 }
 
-async function loadManual() {
+async function loadManual(){
   try {
-    state.m.data = await sbFetch('fsd_miles_manual?order=recorded_at.desc&limit=5000');
+    state.m.data=await sbFetch('fsd_miles_manual?order=recorded_at.desc&limit=5000');
     document.getElementById('manualCount').textContent=state.m.data.length;
     renderTopStats('m',state.m.data);
     renderGrowth('m',state.m.data);
     renderChart('m');
     renderTable('m',state.m.data);
-  } catch(e) { console.error(e); }
+  } catch(e){console.error('Manual load:',e);}
 }
 
 loadHourly();
 loadManual();
-setInterval(loadHourly, 5*60*1000);
+setInterval(loadHourly,5*60*1000);
+setInterval(loadManual,5*60*1000);
 </script>
 </body>
 </html>
