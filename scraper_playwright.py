@@ -160,7 +160,9 @@ def main():
     print(f"✓ Total miles: {total_miles:,}")
     print(f"✓ City miles:  {city_miles:,}" if city_miles else "  City miles:  N/A")
 
-    sb_insert("fsd_miles", {
+    target_table = os.environ.get("TARGET_TABLE", "fsd_miles")
+    print(f"Writing to table: {target_table}")
+    sb_insert(target_table, {
         "recorded_at": now.isoformat(),
         "total_miles": total_miles,
         "city_miles": city_miles,
