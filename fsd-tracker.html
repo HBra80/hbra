@@ -37,44 +37,43 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;padding:24px 20px}
 
-/* HEADER */
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
-.header h1{font-family:var(--display);font-size:2rem;letter-spacing:.5px}
-.header p{color:var(--muted);font-size:.82rem;margin-top:3px}
+.header-left h1{font-family:var(--display);font-size:2rem;letter-spacing:.5px}
+.header-left p{color:var(--muted);font-size:.82rem;margin-top:3px}
+.version{display:inline-block;background:var(--blue-bg);color:var(--blue);font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:8px;margin-left:8px;vertical-align:middle;font-family:var(--mono)}
 .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 
-/* TABS */
 .tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid var(--border)}
 .tab{padding:10px 22px;font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s;user-select:none}
 .tab:hover{color:var(--text)}
 .tab.active{color:var(--blue);border-bottom-color:var(--blue)}
 .tab-badge{display:inline-block;background:var(--orange-bg);color:var(--orange);font-size:.68rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle}
 
-/* BUTTONS */
 .btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--white);color:var(--text);font-size:.78rem;cursor:pointer;font-family:var(--sans);font-weight:500;transition:.15s}
 .btn:hover{border-color:var(--blue);color:var(--blue)}
-.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;padding:9px 20px;font-size:.85rem}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;padding:9px 22px;font-size:.85rem}
 .btn-primary:hover{background:#1558d6;border-color:#1558d6;color:#fff}
-.btn-primary:disabled{background:var(--muted2);border-color:var(--muted2);cursor:not-allowed}
+.btn-primary:disabled{background:var(--muted2);border-color:var(--muted2);cursor:not-allowed;color:#fff}
 
-/* SYNC */
 .sync-badge{display:none;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:.76rem;font-weight:500}
 .sync-ok{background:var(--green-bg);color:var(--green)}
 .sync-err{background:var(--red-bg);color:var(--red)}
 .sync-ing{background:var(--blue-bg);color:var(--blue)}
 
 /* SNAPSHOT HERO */
-.snapshot-hero{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);margin-bottom:24px;text-align:center}
-.snapshot-hero h2{font-family:var(--display);font-size:1.1rem;letter-spacing:.5px;color:var(--muted);margin-bottom:16px;text-transform:uppercase}
-.snap-btn-wrap{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
-.snap-status{font-size:.8rem;color:var(--muted);font-family:var(--mono)}
-.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+.snapshot-hero{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);margin-bottom:24px}
+.snapshot-hero h2{font-family:var(--display);font-size:1.1rem;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;text-transform:uppercase}
+.snapshot-hero p{font-size:.8rem;color:var(--muted);margin-bottom:18px}
+.snap-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.snap-status{font-size:.8rem;font-family:var(--mono)}
+.snap-status.ok{color:var(--green)}
+.snap-status.err{color:var(--red)}
+.snap-status.ing{color:var(--blue)}
+.snap-info{margin-top:14px;padding:12px 16px;background:var(--surface);border-radius:8px;font-size:.78rem;color:var(--muted);line-height:1.6;border:1px solid var(--border)}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* SECTION LABEL */
 .section-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 10px}
-
-/* TOP STATS */
 .top-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:4px}
 .top-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
 .top-card .label{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
@@ -84,7 +83,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .top-card.green .value{color:var(--green)}
 .top-card.orange .value{color:var(--orange)}
 
-/* GROWTH */
 .growth-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:6px}
 .stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow)}
 .stat-card .label{font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
@@ -94,7 +92,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .stat-card.green .value{color:var(--green)}
 .stat-card.orange .value{color:var(--orange)}
 
-/* CHART */
 .card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:20px}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
 .card-title{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -106,7 +103,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .filter-btn{padding:4px 13px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.74rem;cursor:pointer;font-family:var(--sans);transition:.15s}
 .filter-btn:hover,.filter-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
 
-/* TABLE */
 table{width:100%;border-collapse:collapse;font-size:.79rem}
 thead tr{background:var(--surface)}
 th{text-align:right;color:var(--muted);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;padding:9px 10px;border-bottom:2px solid var(--border);white-space:nowrap}
@@ -120,13 +116,8 @@ tr:hover td{background:var(--surface)}
 .dz{color:var(--muted2)}
 .no-data{text-align:center;padding:48px;color:var(--muted);font-size:.88rem;font-family:var(--sans)}
 
-/* TAB PANELS */
 .tab-panel{display:none}
 .tab-panel.active{display:block}
-
-/* MANUAL SOURCE BADGE */
-.src-badge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:.68rem;font-weight:600;margin-left:6px}
-.src-manual{background:var(--orange-bg);color:var(--orange)}
 
 @media(max-width:600px){
   body{padding:14px 10px}
@@ -139,51 +130,32 @@ tr:hover td{background:var(--surface)}
 <body>
 
 <div class="header">
-  <div>
-    <h1>Tesla FSD Miles Tracker</h1>
-    <p>Stündliche Aufzeichnung via GitHub Actions · Quelle: tesla.com/de_at/fsd/safety</p>
+  <div class="header-left">
+    <h1>Tesla FSD Miles Tracker <span class="version">v1.1</span></h1>
+    <p>Stündliche Aufzeichnung via GitHub Actions · Quelle: tesla.com/de_AT/fsd/safety</p>
   </div>
   <div class="header-right">
     <div class="sync-badge" id="syncBadge"><span id="syncText"></span></div>
   </div>
 </div>
 
-<!-- TABS -->
 <div class="tabs">
   <div class="tab active" onclick="switchTab('hourly',this)">⏱ Stündlich (automatisch)</div>
   <div class="tab" onclick="switchTab('manual',this)">📸 Snapshots (manuell)<span class="tab-badge" id="manualCount">0</span></div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════ -->
 <!-- TAB 1: STÜNDLICH -->
-<!-- ═══════════════════════════════════════════════════════ -->
 <div class="tab-panel active" id="panel-hourly">
-
   <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
-    <button class="btn" onclick="exportCSV('hourly')">⬇ CSV Export</button>
+    <button class="btn" onclick="exportCSV('h')">⬇ CSV Export</button>
   </div>
-
   <div class="section-label">Aktuelle Gesamtwerte</div>
   <div class="top-stats">
-    <div class="top-card blue">
-      <div class="label">Gesamtmeilen (Total)</div>
-      <div class="value" id="h-curTotal">—</div>
-      <div class="sub" id="h-curTotalSub">—</div>
-    </div>
-    <div class="top-card green">
-      <div class="label">Stadtmeilen</div>
-      <div class="value" id="h-curCity">—</div>
-      <div class="sub" id="h-curCitySub">—</div>
-    </div>
-    <div class="top-card orange">
-      <div class="label">Überlandmeilen (berechnet)</div>
-      <div class="value" id="h-curRural">—</div>
-      <div class="sub" id="h-curRuralSub">—</div>
-    </div>
+    <div class="top-card blue"><div class="label">Gesamtmeilen (Total)</div><div class="value" id="h-curTotal">—</div><div class="sub" id="h-curTotalSub">—</div></div>
+    <div class="top-card green"><div class="label">Stadtmeilen</div><div class="value" id="h-curCity">—</div><div class="sub" id="h-curCitySub">—</div></div>
+    <div class="top-card orange"><div class="label">Überlandmeilen (berechnet)</div><div class="value" id="h-curRural">—</div><div class="sub" id="h-curRuralSub">—</div></div>
   </div>
-
   <div id="h-growthSection"></div>
-
   <div class="card" style="margin-top:24px">
     <div class="card-header">
       <div class="card-title">Verlauf</div>
@@ -202,7 +174,6 @@ tr:hover td{background:var(--surface)}
       <div class="legend-item"><div style="width:18px;height:0;border-top:2px dotted var(--orange)"></div>Überlandmeilen</div>
     </div>
   </div>
-
   <div class="card">
     <div class="card-header">
       <div class="card-title">Datentabelle</div>
@@ -213,65 +184,46 @@ tr:hover td{background:var(--surface)}
       </div>
     </div>
     <div style="overflow-x:auto">
-      <table>
-        <thead><tr>
-          <th>Zeitpunkt</th><th>Gesamt</th><th>Δ Gesamt</th>
-          <th>Stadt</th><th>Δ Stadt</th>
-          <th>Überland</th><th>Δ Überland</th><th>Meilen/h</th>
-        </tr></thead>
-        <tbody id="h-tableBody"><tr><td colspan="8" class="no-data">Wird geladen…</td></tr></tbody>
-      </table>
+      <table><thead><tr>
+        <th>Zeitpunkt</th><th>Gesamt</th><th>Δ Gesamt</th>
+        <th>Stadt</th><th>Δ Stadt</th>
+        <th>Überland</th><th>Δ Überland</th><th>Meilen/h</th>
+      </tr></thead><tbody id="h-tableBody"><tr><td colspan="8" class="no-data">Wird geladen…</td></tr></tbody></table>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- TAB 2: MANUAL SNAPSHOTS -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TAB 2: SNAPSHOTS -->
 <div class="tab-panel" id="panel-manual">
 
-  <!-- SNAPSHOT BUTTON -->
   <div class="snapshot-hero">
     <h2>Aktuellen Wert von Tesla abrufen</h2>
-    <div class="snap-btn-wrap">
+    <p>Startet den GitHub Actions Scraper sofort — Ergebnis erscheint nach ca. 40 Sekunden in der Tabelle unten.</p>
+    <div class="snap-row">
       <button class="btn btn-primary" id="snapBtn" onclick="takeSnapshot()">
         📸 Jetzt Snapshot aufnehmen
       </button>
-      <div class="snap-status" id="snapStatus">Ruft live von tesla.com/de_at/fsd/safety ab</div>
+      <div class="snap-status" id="snapStatus"></div>
     </div>
+    <div class="snap-info" id="snapInfo" style="display:none"></div>
   </div>
 
   <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
-    <button class="btn" onclick="exportCSV('manual')">⬇ CSV Export</button>
+    <button class="btn" onclick="exportCSV('m')">⬇ CSV Export</button>
   </div>
 
   <div class="section-label">Letzter Snapshot</div>
   <div class="top-stats">
-    <div class="top-card blue">
-      <div class="label">Gesamtmeilen (Total)</div>
-      <div class="value" id="m-curTotal">—</div>
-      <div class="sub" id="m-curTotalSub">—</div>
-    </div>
-    <div class="top-card green">
-      <div class="label">Stadtmeilen</div>
-      <div class="value" id="m-curCity">—</div>
-      <div class="sub" id="m-curCitySub">—</div>
-    </div>
-    <div class="top-card orange">
-      <div class="label">Überlandmeilen (berechnet)</div>
-      <div class="value" id="m-curRural">—</div>
-      <div class="sub" id="m-curRuralSub">—</div>
-    </div>
+    <div class="top-card blue"><div class="label">Gesamtmeilen (Total)</div><div class="value" id="m-curTotal">—</div><div class="sub" id="m-curTotalSub">—</div></div>
+    <div class="top-card green"><div class="label">Stadtmeilen</div><div class="value" id="m-curCity">—</div><div class="sub" id="m-curCitySub">—</div></div>
+    <div class="top-card orange"><div class="label">Überlandmeilen (berechnet)</div><div class="value" id="m-curRural">—</div><div class="sub" id="m-curRuralSub">—</div></div>
   </div>
-
   <div id="m-growthSection"></div>
-
   <div class="card" style="margin-top:24px">
     <div class="card-header">
       <div class="card-title">Verlauf aller Snapshots</div>
       <div class="filter-bar">
-        <button class="filter-btn active" onclick="setChartRange('m',this,24)">24h</button>
-        <button class="filter-btn" onclick="setChartRange('m',this,168)">7 Tage</button>
+        <button class="filter-btn active" onclick="setChartRange('m',this,168)">7 Tage</button>
         <button class="filter-btn" onclick="setChartRange('m',this,720)">30 Tage</button>
         <button class="filter-btn" onclick="setChartRange('m',this,99999)">Alle</button>
       </div>
@@ -283,7 +235,6 @@ tr:hover td{background:var(--surface)}
       <div class="legend-item"><div style="width:18px;height:0;border-top:2px dotted var(--orange)"></div>Überlandmeilen</div>
     </div>
   </div>
-
   <div class="card">
     <div class="card-header">
       <div class="card-title">Snapshot-Tabelle</div>
@@ -294,14 +245,11 @@ tr:hover td{background:var(--surface)}
       </div>
     </div>
     <div style="overflow-x:auto">
-      <table>
-        <thead><tr>
-          <th>Zeitpunkt</th><th>Gesamt</th><th>Δ Gesamt</th>
-          <th>Stadt</th><th>Δ Stadt</th>
-          <th>Überland</th><th>Δ Überland</th><th>Δ Zeit</th>
-        </tr></thead>
-        <tbody id="m-tableBody"><tr><td colspan="8" class="no-data">Noch keine Snapshots — ersten Snapshot oben aufnehmen.</td></tr></tbody>
-      </table>
+      <table><thead><tr>
+        <th>Zeitpunkt</th><th>Gesamt</th><th>Δ Gesamt</th>
+        <th>Stadt</th><th>Δ Stadt</th>
+        <th>Überland</th><th>Δ Überland</th><th>Δ Zeit</th>
+      </tr></thead><tbody id="m-tableBody"><tr><td colspan="8" class="no-data">Noch keine Snapshots — ersten Snapshot oben aufnehmen.</td></tr></tbody></table>
     </div>
   </div>
 </div>
@@ -310,23 +258,17 @@ tr:hover td{background:var(--surface)}
 const SB_URL = 'https://cltfjarsnvpxgzlirtiv.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdGZqYXJzbnZweGd6bGlydGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzg1ODQsImV4cCI6MjA4ODkxNDU4NH0.kXs7tW9DcDSThW3NbK9MsMH5FfHs65ZCNBxS-cvI7bk';
 
-// State per tab
 const state = {
-  h: { data:[], chartHours:24, tableRows:48, chart:null },
-  m: { data:[], chartHours:24, tableRows:50, chart:null },
+  h: { data:[], chartHours:24,  tableRows:48,  chart:null },
+  m: { data:[], chartHours:168, tableRows:50,  chart:null },
 };
 
-// ── HELPERS ──────────────────────────────────────────────
-async function sbFetch(path, opts={}) {
+async function sbFetch(path) {
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
-    ...opts,
-    headers:{
-      'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,
-      'Content-Type':'application/json',...(opts.headers||{})
-    }
+    headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`}
   });
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
-  const t = await res.text(); return t ? JSON.parse(t) : [];
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
 }
 
 function setSyncStatus(type, msg) {
@@ -354,43 +296,37 @@ const PERIODS = [
   {label:'1 Jahr',hours:8760},
 ];
 
-// ── TAB SWITCH ────────────────────────────────────────────
 function switchTab(tab, el) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('panel-'+tab).classList.add('active');
-  // Re-render chart (canvas sizing fix)
-  setTimeout(()=>{
-    if(tab==='hourly') renderChart('h');
-    else renderChart('m');
-  },50);
+  setTimeout(()=>renderChart(tab==='hourly'?'h':'m'),50);
 }
 
-// ── RENDER ────────────────────────────────────────────────
 function findPrev(data, refTs, hours) {
   const cutoff = refTs - hours*3600*1000;
   return data.find(r => new Date(r.recorded_at).getTime() <= cutoff) || null;
 }
 
-function renderTopStats(prefix, data) {
-  const l = data[0]; if(!l) return;
-  const r = rural(l);
-  document.getElementById(`${prefix}-curTotal`).textContent  = fmtB(l.total_miles);
-  document.getElementById(`${prefix}-curTotalSub`).textContent = 'Stand: '+fmtT(l.recorded_at);
-  document.getElementById(`${prefix}-curCity`).textContent   = fmtB(l.city_miles);
-  document.getElementById(`${prefix}-curCitySub`).textContent = pct(l.city_miles,l.total_miles)+' der Gesamtmeilen';
-  document.getElementById(`${prefix}-curRural`).textContent  = fmtB(r);
-  document.getElementById(`${prefix}-curRuralSub`).textContent = pct(r,l.total_miles)+' der Gesamtmeilen';
+function renderTopStats(p, data) {
+  const l=data[0]; if(!l) return;
+  const r=rural(l);
+  document.getElementById(`${p}-curTotal`).textContent  = fmtB(l.total_miles);
+  document.getElementById(`${p}-curTotalSub`).textContent = 'Stand: '+fmtT(l.recorded_at);
+  document.getElementById(`${p}-curCity`).textContent   = fmtB(l.city_miles);
+  document.getElementById(`${p}-curCitySub`).textContent = pct(l.city_miles,l.total_miles)+' der Gesamtmeilen';
+  document.getElementById(`${p}-curRural`).textContent  = fmtB(r);
+  document.getElementById(`${p}-curRuralSub`).textContent = pct(r,l.total_miles)+' der Gesamtmeilen';
 }
 
-function renderGrowth(prefix, data) {
-  const l = data[0]; if(!l) return;
-  const refTs = new Date(l.recorded_at).getTime();
-  const TYPES = [
-    {label:'Gesamtmeilen',color:'blue',   get:(c,p)=>c.total_miles!=null&&p?.total_miles!=null?c.total_miles-p.total_miles:null},
-    {label:'Stadtmeilen', color:'green',  get:(c,p)=>c.city_miles!=null&&p?.city_miles!=null?c.city_miles-p.city_miles:null},
-    {label:'Überland',    color:'orange', get:(c,p)=>{const rc=rural(c),rp=p?rural(p):null;return rc!=null&&rp!=null?rc-rp:null;}},
+function renderGrowth(p, data) {
+  const l=data[0]; if(!l) return;
+  const refTs=new Date(l.recorded_at).getTime();
+  const TYPES=[
+    {label:'Gesamtmeilen',color:'blue',   get:(c,pv)=>c.total_miles!=null&&pv?.total_miles!=null?c.total_miles-pv.total_miles:null},
+    {label:'Stadtmeilen', color:'green',  get:(c,pv)=>c.city_miles!=null&&pv?.city_miles!=null?c.city_miles-pv.city_miles:null},
+    {label:'Überland',    color:'orange', get:(c,pv)=>{const rc=rural(c),rp=pv?rural(pv):null;return rc!=null&&rp!=null?rc-rp:null;}},
   ];
   let html='';
   PERIODS.forEach(period=>{
@@ -400,15 +336,11 @@ function renderGrowth(prefix, data) {
     TYPES.forEach(t=>{
       const delta=t.get(l,prev);
       const rate=delta!=null&&hrs?Math.round(delta/hrs):null;
-      html+=`<div class="stat-card ${t.color}">
-        <div class="label">${t.label}</div>
-        <div class="value">${prev?fmtB(delta):'—'}</div>
-        <div class="rate">${rate!=null?fmt(rate)+' Meilen/h':'Nicht genug Daten'}</div>
-      </div>`;
+      html+=`<div class="stat-card ${t.color}"><div class="label">${t.label}</div><div class="value">${prev?fmtB(delta):'—'}</div><div class="rate">${rate!=null?fmt(rate)+' Meilen/h':'Nicht genug Daten'}</div></div>`;
     });
     html+='</div>';
   });
-  document.getElementById(`${prefix}-growthSection`).innerHTML=html;
+  document.getElementById(`${p}-growthSection`).innerHTML=html;
 }
 
 function getFiltered(data, hours) {
@@ -417,42 +349,29 @@ function getFiltered(data, hours) {
   return data.filter(r=>new Date(r.recorded_at).getTime()>=cutoff);
 }
 
-function renderChart(prefix) {
-  const s = state[prefix];
-  const data = getFiltered(s.data, s.chartHours).slice().reverse();
-  const labels = data.map(r=>fmtT(r.recorded_at));
-  const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+function renderChart(p) {
+  const s=state[p];
+  const data=getFiltered(s.data,s.chartHours).slice().reverse();
+  const isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
   const grid=isDark?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
   const tick=isDark?'#8891aa':'#7a8898';
   const pts=data.length>200?0:2;
-
   if(s.chart) s.chart.destroy();
-  s.chart = new Chart(document.getElementById(`${prefix}-mainChart`), {
+  s.chart=new Chart(document.getElementById(`${p}-mainChart`),{
     type:'line',
-    data:{
-      labels,
-      datasets:[
-        {label:'Gesamtmeilen',data:data.map(r=>r.total_miles),
-         borderColor:isDark?'#4d8dff':'#1a6aff',backgroundColor:isDark?'rgba(77,141,255,.08)':'rgba(26,106,255,.06)',
-         borderWidth:2.5,pointRadius:pts,fill:true,tension:.3},
-        {label:'Stadtmeilen',data:data.map(r=>r.city_miles),
-         borderColor:isDark?'#2ecc7a':'#00a854',backgroundColor:'transparent',
-         borderWidth:1.5,pointRadius:pts,fill:false,tension:.3,borderDash:[6,3]},
-        {label:'Überlandmeilen',data:data.map(r=>rural(r)),
-         borderColor:isDark?'#ff8533':'#f56a00',backgroundColor:'transparent',
-         borderWidth:1.5,pointRadius:pts,fill:false,tension:.3,borderDash:[2,3]},
-      ]
-    },
+    data:{labels:data.map(r=>fmtT(r.recorded_at)),datasets:[
+      {label:'Gesamtmeilen',data:data.map(r=>r.total_miles),borderColor:isDark?'#4d8dff':'#1a6aff',backgroundColor:isDark?'rgba(77,141,255,.08)':'rgba(26,106,255,.06)',borderWidth:2.5,pointRadius:pts,fill:true,tension:.3},
+      {label:'Stadtmeilen',data:data.map(r=>r.city_miles),borderColor:isDark?'#2ecc7a':'#00a854',backgroundColor:'transparent',borderWidth:1.5,pointRadius:pts,fill:false,tension:.3,borderDash:[6,3]},
+      {label:'Überlandmeilen',data:data.map(r=>rural(r)),borderColor:isDark?'#ff8533':'#f56a00',backgroundColor:'transparent',borderWidth:1.5,pointRadius:pts,fill:false,tension:.3,borderDash:[2,3]},
+    ]},
     options:{
       responsive:true,maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:false},
         tooltip:{
-          backgroundColor:isDark?'#1a1d27':'#fff',
-          borderColor:isDark?'#2e3248':'#e2e6ea',borderWidth:1,
-          titleColor:isDark?'#e8ecf4':'#1a2433',bodyColor:isDark?'#8891aa':'#7a8898',
-          padding:14,
+          backgroundColor:isDark?'#1a1d27':'#fff',borderColor:isDark?'#2e3248':'#e2e6ea',borderWidth:1,
+          titleColor:isDark?'#e8ecf4':'#1a2433',bodyColor:isDark?'#8891aa':'#7a8898',padding:14,
           callbacks:{
             title:items=>fmtT(data[items[0].dataIndex]?.recorded_at||''),
             label:ctx=>`  ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`,
@@ -474,14 +393,11 @@ function renderChart(prefix) {
   });
 }
 
-function renderTable(prefix, data) {
-  const s = state[prefix];
-  const rows = data.slice(0, s.tableRows===99999?data.length:s.tableRows);
-  const tbody = document.getElementById(`${prefix}-tableBody`);
-  if(!rows.length){
-    tbody.innerHTML='<tr><td colspan="8" class="no-data">Noch keine Daten vorhanden.</td></tr>';
-    return;
-  }
+function renderTable(p, data) {
+  const s=state[p];
+  const rows=data.slice(0,s.tableRows===99999?data.length:s.tableRows);
+  const tbody=document.getElementById(`${p}-tableBody`);
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="8" class="no-data">Noch keine Daten vorhanden.</td></tr>';return;}
   const d=v=>v==null?'<span class="dz">—</span>':v>0?`<span class="dp">+${fmt(v)}</span>`:`<span class="dn">${fmt(v)}</span>`;
   tbody.innerHTML=rows.map((r,i)=>{
     const prev=rows[i+1];
@@ -490,106 +406,86 @@ function renderTable(prefix, data) {
     const rR=rural(r),pR=prev?rural(prev):null;
     const dR=rR!=null&&pR!=null?rR-pR:null;
     const hrs=prev?(new Date(r.recorded_at)-new Date(prev.recorded_at))/3600000:null;
-    // For manual tab show time gap instead of miles/h
-    const lastCol = prefix==='m'
-      ? (hrs!=null?`${hrs.toFixed(1)}h`:'—')
-      : (dT!=null&&hrs?fmt(Math.round(dT/hrs)):'—');
-    return `<tr>
-      <td>${fmtT(r.recorded_at)}</td>
-      <td>${fmt(r.total_miles)}</td><td>${d(dT)}</td>
-      <td>${fmt(r.city_miles)}</td><td>${d(dC)}</td>
-      <td>${fmt(rR)}</td><td>${d(dR)}</td>
-      <td>${lastCol}</td>
-    </tr>`;
+    const lastCol=p==='m'?(hrs!=null?`${hrs.toFixed(1)}h`:'—'):(dT!=null&&hrs?fmt(Math.round(dT/hrs)):'—');
+    return `<tr><td>${fmtT(r.recorded_at)}</td><td>${fmt(r.total_miles)}</td><td>${d(dT)}</td><td>${fmt(r.city_miles)}</td><td>${d(dC)}</td><td>${fmt(rR)}</td><td>${d(dR)}</td><td>${lastCol}</td></tr>`;
   }).join('');
 }
 
-function setChartRange(prefix, btn, hours) {
-  const panel = prefix==='h'?'panel-hourly':'panel-manual';
-  document.querySelectorAll(`#${panel} .filter-btn`).forEach(b=>{
-    if(b.getAttribute('onclick')?.includes('setChartRange')) b.classList.remove('active');
-  });
-  btn.classList.add('active');
-  state[prefix].chartHours=hours;
-  renderChart(prefix);
+function setChartRange(p,btn,hours){
+  document.querySelectorAll(`#panel-${p==='h'?'hourly':'manual'} .filter-btn`).forEach(b=>{if(b.onclick?.toString().includes('setChartRange'))b.classList.remove('active');});
+  btn.classList.add('active'); state[p].chartHours=hours; renderChart(p);
 }
-
-function setTableRows(prefix, btn, n) {
-  const panel=prefix==='h'?'panel-hourly':'panel-manual';
-  document.querySelectorAll(`#${panel} .filter-btn`).forEach(b=>{
-    if(b.getAttribute('onclick')?.includes('setTableRows')) b.classList.remove('active');
-  });
-  btn.classList.add('active');
-  state[prefix].tableRows=n;
-  renderTable(prefix, state[prefix].data);
+function setTableRows(p,btn,n){
+  document.querySelectorAll(`#panel-${p==='h'?'hourly':'manual'} .filter-btn`).forEach(b=>{if(b.onclick?.toString().includes('setTableRows'))b.classList.remove('active');});
+  btn.classList.add('active'); state[p].tableRows=n; renderTable(p,state[p].data);
 }
-
-function exportCSV(prefix) {
-  const data=state[prefix].data;
+function exportCSV(p){
+  const data=state[p].data;
   const h='Zeitpunkt,Gesamtmeilen,Stadtmeilen,Überlandmeilen\n';
   const rows=data.map(r=>`${r.recorded_at},${r.total_miles??''},${r.city_miles??''},${rural(r)??''}`).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([h+rows],{type:'text/csv;charset=utf-8;'}));
-  a.download=`tesla_fsd_${prefix}_${new Date().toISOString().split('T')[0]}.csv`;
+  a.download=`tesla_fsd_${p}_${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
 }
 
-// ── SNAPSHOT (live scrape via Supabase Edge Function proxy) ──
+// ── SNAPSHOT: triggers GitHub Actions workflow ────────────
+let snapRefreshTimer = null;
+
 async function takeSnapshot() {
   const btn=document.getElementById('snapBtn');
   const status=document.getElementById('snapStatus');
+  const info=document.getElementById('snapInfo');
+
   btn.disabled=true;
-  btn.innerHTML='<span class="spinner"></span>Wird abgerufen…';
-  status.textContent='Verbinde mit tesla.com…';
+  btn.innerHTML='<span class="spinner"></span>Wird gestartet…';
+  status.className='snap-status ing';
+  status.textContent='Starte GitHub Actions Workflow…';
+  info.style.display='none';
 
   try {
-    // Call our edge function to scrape Tesla (avoids CORS)
-    const res = await fetch(`${SB_URL}/functions/v1/fsd-scraper`, {
+    const res = await fetch(`${SB_URL}/functions/v1/trigger-workflow`, {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${SB_KEY}`},
       body:JSON.stringify({})
     });
+    const result = await res.json();
 
-    if(!res.ok) {
-      const err=await res.text();
-      throw new Error(`Edge Function Fehler: ${err}`);
+    if(result.success) {
+      status.className='snap-status ok';
+      status.textContent='✓ Workflow gestartet!';
+      btn.innerHTML='📸 Jetzt Snapshot aufnehmen';
+      btn.disabled=false;
+      info.style.display='block';
+      info.textContent='⏳ Der Scraper läuft jetzt auf GitHub (~40 Sek.). Die neuen Daten erscheinen automatisch in Tab "Stündlich" — diese Seite aktualisiert sich in 60 Sekunden.';
+
+      // Auto-refresh after 65 seconds to pick up new data
+      clearTimeout(snapRefreshTimer);
+      snapRefreshTimer = setTimeout(()=>{
+        loadHourly();
+        info.textContent='✓ Daten aktualisiert.';
+        setTimeout(()=>info.style.display='none', 3000);
+      }, 65000);
+
+    } else {
+      throw new Error(result.error || 'Unbekannter Fehler');
     }
-
-    const result=await res.json();
-    if(!result.total_miles) throw new Error('Keine Meilen-Daten gefunden');
-
-    // Save to fsd_miles_manual
-    await sbFetch('fsd_miles_manual',{
-      method:'POST',
-      headers:{'Prefer':'return=representation'},
-      body:JSON.stringify({
-        recorded_at: new Date().toISOString(),
-        total_miles: result.total_miles,
-        city_miles:  result.city_miles,
-        source:      'manual'
-      })
-    });
-
-    status.textContent=`✓ Gespeichert: ${fmtB(result.total_miles)} Gesamtmeilen`;
-    await loadManual();
   } catch(e) {
-    status.textContent='⚠ Fehler: '+e.message+' → Edge Function nötig (siehe Anleitung)';
-    console.error(e);
-  } finally {
-    btn.disabled=false;
+    status.className='snap-status err';
+    status.textContent='⚠ Fehler: '+e.message;
     btn.innerHTML='📸 Jetzt Snapshot aufnehmen';
+    btn.disabled=false;
   }
 }
 
-// ── LOAD DATA ─────────────────────────────────────────────
 async function loadHourly() {
-  setSyncStatus('ing','Lade stündliche Daten…');
+  setSyncStatus('ing','Lade Daten…');
   try {
     state.h.data = await sbFetch('fsd_miles?order=recorded_at.desc&limit=10000');
-    renderTopStats('h', state.h.data);
-    renderGrowth('h', state.h.data);
+    renderTopStats('h',state.h.data);
+    renderGrowth('h',state.h.data);
     renderChart('h');
-    renderTable('h', state.h.data);
+    renderTable('h',state.h.data);
     setSyncStatus('ok',`${state.h.data.length} Einträge`);
   } catch(e) { setSyncStatus('err','Fehler: '+e.message); }
 }
@@ -597,15 +493,14 @@ async function loadHourly() {
 async function loadManual() {
   try {
     state.m.data = await sbFetch('fsd_miles_manual?order=recorded_at.desc&limit=5000');
-    document.getElementById('manualCount').textContent = state.m.data.length;
-    renderTopStats('m', state.m.data);
-    renderGrowth('m', state.m.data);
+    document.getElementById('manualCount').textContent=state.m.data.length;
+    renderTopStats('m',state.m.data);
+    renderGrowth('m',state.m.data);
     renderChart('m');
-    renderTable('m', state.m.data);
-  } catch(e) { console.error('Manual load error:', e); }
+    renderTable('m',state.m.data);
+  } catch(e) { console.error(e); }
 }
 
-// Init
 loadHourly();
 loadManual();
 setInterval(loadHourly, 5*60*1000);
