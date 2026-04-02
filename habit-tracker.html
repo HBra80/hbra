@@ -176,7 +176,8 @@ body {
 .habit-item.done.cat-Schlaf { background: var(--purple-bg); border-color: rgba(167,139,250,.25); }
 .habit-item.done.cat-Arbeit { background: var(--yellow-bg); border-color: rgba(255,193,71,.25); }
 .habit-item.done.cat-Familie { background: var(--pink-bg); border-color: rgba(244,114,182,.25); }
-.habit-item.done.cat-Mental { background: var(--teal-bg); border-color: rgba(45,212,191,.25); }
+.habit-item.done.cat-Mental   { background: var(--teal-bg);   border-color: rgba(45,212,191,.25); }
+.habit-item.done.cat-Finanzen { background: var(--orange-bg); border-color: rgba(255,133,51,.25); }
 
 .habit-check {
   width: 26px; height: 26px;
@@ -494,25 +495,40 @@ const HABITS = [
   { id:'arb2', cat:'Arbeit', label:'Tagesplan erstellt', note:'3 Hauptaufgaben definiert', avoid:false },
   { id:'arb3', cat:'Arbeit', label:'Pomodoro-Technik', note:'25 Min. Fokus / 5 Pause', avoid:false },
   { id:'arb4', cat:'Arbeit', label:'Postfach geleert', note:'Inbox Zero anstreben', avoid:false },
+  // Ernährung – neu
+  { id:'e11', cat:'Ernährung', label:'Zucker in Getränken', note:'Säfte & Softdrinks meiden', avoid:true },
+  // Training – neu
+  { id:'t1', cat:'Training', label:'Kaltwasser-Dusche', note:'Dopamin & Durchblutung', avoid:false },
+  // Schlaf – neu
+  { id:'s4', cat:'Schlaf', label:'Koffein-Stopp spätestens 13 Uhr', note:'Schlafqualität schützen', avoid:false },
+  { id:'s8', cat:'Schlaf', label:'Große Mahlzeiten vor dem Schlafen', note:'< 3h vorher meiden', avoid:true },
   // Familie & Beziehungen
   { id:'fam1', cat:'Familie', label:'Bewusstes Zeit mit Familie', note:'Mind. 30 Min. präsent', avoid:false },
   { id:'fam2', cat:'Familie', label:'Dankbarkeit ausdrücken', note:'Kleines Zeichen genügt', avoid:false },
   { id:'fam3', cat:'Familie', label:'Aktiv zuhören', note:'Ohne Handy / Ablenkung', avoid:false },
+  { id:'f2',   cat:'Familie', label:'Wöchentliches Date / Paarzeit', note:'Beziehung aktiv pflegen', avoid:false },
+  // Arbeit – neu
+  { id:'a1',   cat:'Arbeit', label:'Schwerste Aufgabe zuerst', note:'Eat the Frog', avoid:false },
   // Mentales Wohlbefinden
   { id:'mnt1', cat:'Mental', label:'Meditation / Atemübung', note:'5–10 Min.', avoid:false },
   { id:'mnt2', cat:'Mental', label:'Journaling', note:'Gedanken sortieren', avoid:false },
   { id:'mnt3', cat:'Mental', label:'Lesen (kein Screen)', note:'Wissen & Entspannung', avoid:false },
   { id:'mnt4', cat:'Mental', label:'Keine Nachrichten vor 10 Uhr', note:'Stressfreier Morgen', avoid:true },
+  { id:'m2',   cat:'Mental', label:'Abend-Review: 3 gute Dinge', note:'Dankbarkeit trainieren', avoid:false },
+  { id:'m5',   cat:'Mental', label:'In der Natur sein', note:'Min. 2× pro Woche', avoid:false },
+  // Finanzen
+  { id:'fi4',  cat:'Finanzen', label:'Jahres- & 5-Jahres-Ziel schriftlich', note:'Richtung & Klarheit', avoid:false },
 ];
 
 const CAT_COLORS = {
-  'Ernährung': { color: 'var(--green)', bg: 'var(--green-bg)' },
-  'Training':  { color: 'var(--blue)',  bg: 'var(--blue-bg)'  },
-  'Vermeiden': { color: 'var(--red)',   bg: 'var(--red-bg)'   },
-  'Schlaf':    { color: 'var(--purple)',bg: 'var(--purple-bg)'},
-  'Arbeit':    { color: 'var(--yellow)',bg: 'var(--yellow-bg)'},
-  'Familie':   { color: 'var(--pink)',  bg: 'var(--pink-bg)'  },
-  'Mental':    { color: 'var(--teal)', bg: 'var(--teal-bg)'  },
+  'Ernährung': { color: 'var(--green)',  bg: 'var(--green-bg)'  },
+  'Training':  { color: 'var(--blue)',   bg: 'var(--blue-bg)'   },
+  'Vermeiden': { color: 'var(--red)',    bg: 'var(--red-bg)'    },
+  'Schlaf':    { color: 'var(--purple)', bg: 'var(--purple-bg)' },
+  'Arbeit':    { color: 'var(--yellow)', bg: 'var(--yellow-bg)' },
+  'Familie':   { color: 'var(--pink)',   bg: 'var(--pink-bg)'   },
+  'Mental':    { color: 'var(--teal)',   bg: 'var(--teal-bg)'   },
+  'Finanzen':  { color: 'var(--orange)', bg: 'var(--orange-bg)' },
 };
 
 const SQL_SETUP = `-- Einmalig im Supabase SQL Editor ausführen:
